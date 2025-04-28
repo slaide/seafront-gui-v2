@@ -19,6 +19,9 @@ Object.assign(window, { getHardwareCapabilities, getPlateTypes, defaultConfig })
 
 import { ChannelImageView } from "channelview";
 
+import { enabletooltip } from "tooltip";
+Object.assign(window, { enabletooltip });
+
 // import alpine, and start
 import { Alpine } from "alpine";
 window.addEventListener("load", () => {

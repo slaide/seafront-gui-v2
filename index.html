@@ -28,7 +28,8 @@
 				"platenavigator":   "./src/platenavigator.js",
 				"numberinput":      "./src/numberinput.js",
 				"microscope_setup": "./src/microscope_setup.js",
-				"channelview":      "./src/channelview.js"
+				"channelview":      "./src/channelview.js",
+				"tooltip":          "./src/tooltip.js"
 			}
 		}
 	</script>
@@ -51,71 +52,12 @@
 		.scrolly {
 			overflow-y: auto;
 		}
+		label[disabled]{
+			text-decoration: line-through;
+			text-decoration-thickness: 2px;
+		}
 	</style>
 
-	<script comment="tooltip">
-		const TIME_TO_TOOLTIP_POPUP_MS = 400;
-		/**
-		 * @param {HTMLElement} el
-		 */
-		function enabletooltip(el) {
-			/** timer to wait a short while between hover start and tooltip popup*/
-			let timer = null
-			/** tooltip element will be created on demand for this element */
-			let tooltipelement = null
-			/** create and display tooltip element */
-			function showtooltip() {
-				tooltipelement = document.createElement("div")
-				tooltipelement.classList.add("tooltip")
-				tooltipelement.innerHTML = el.getAttribute("tooltip")
-				document.body.appendChild(tooltipelement)
-
-				// bounding box of element it references
-				const elbb = el.getBoundingClientRect()
-				// tooltip bounding box ( to measure width, height, and viewport edge clearance )
-				const ttbb = tooltipelement.getBoundingClientRect()
-
-				// initial position: top center of referenced element.
-				let left = elbb.left + elbb.width / 2 - ttbb.width / 2
-				let top = elbb.top - ttbb.height
-
-				// if tooltip overflows out of the viewport to the right:
-				// push back inside (to touch right border)
-				const right_overflow = window.innerWidth - (left + ttbb.width)
-				if (right_overflow < 0) {
-					left += right_overflow
-				}
-				// if tooltip overflows out of the viewport to the left:
-				// push back inside (to touch left border)
-				if (left < 0) {
-					left = 0
-				}
-				// if tooltip overflows out of the viewport to the top:
-				// push back inside (to touch top border)
-				if (top < 0) {
-					top = 0
-				}
-				// bottom overflow is not possible, since the tooltip is positioned at
-				// the top center of the element it references.
-
-				tooltipelement.style = `left: ${left}px; top: ${top}px;`
-			}
-			/** stop tooltip display */
-			function stoptooltip() {
-				el.removeEventListener("mouseleave", stoptooltip)
-				tooltipelement?.parentElement.removeChild(tooltipelement)
-				tooltipelement = null
-				clearTimeout(timer)
-				timer = null
-			}
-			/** initiate waiting to display tooltip timer*/
-			function starttimer(event) {
-				el.addEventListener("mouseleave", stoptooltip)
-				timer = setTimeout(showtooltip, TIME_TO_TOOLTIP_POPUP_MS)
-			}
-			el.addEventListener("mouseenter", starttimer)
-		}
-	</script>
 	<style comment="tooltip">
 		.tooltip {
 			border-radius: 0.3em;
@@ -239,16 +181,34 @@
 
 <body>
 	<style>
+		body{
+			font-size:0.9em;
+			font-family:Arial, Helvetica, sans-serif;
+		}
 		#loadingscreen {
 			position: absolute;
-			width: 100%;
-			height: 100%;
+
+			#loadingscreentext{
+				position:absolute;
+
+				font-size:3em;
+
+				left:50%;
+				top:50%;
+				transform:translate(-50%,-50%);
+			};
+
+			width: 100vw;
+			height: 100vh;
+
 			z-index: 10;
 			background: black;
 			color: white;
 		}
 	</style>
-	<div id="loadingscreen" x-init="setTimeout(()=>{$el.style.display='none'},300)">loading...</div>
+	<div id="loadingscreen" x-init="$nextTick(()=>{$el.style.display='none'})">
+		<div id="loadingscreentext">Loading Seafront ...</div>
+	</div>
 
 	<div x-data="microscope_state" id="content">
 		<style>
@@ -498,64 +458,115 @@
 					<style>
 						#channelgrid {
 							display: grid;
-							grid-template-columns: repeat(3, auto) repeat(6, 5em);
+							grid-template-columns: repeat(3, auto) 5em 5em 5em 5em 4em 7em;
+
+							.channel-config-header{
+								text-align: center;
+							}
 						}
 					</style>
 					<div id="channelgrid" class="scrolly">
-						<p></p>
-						<p>Channel</p>
-						<p></p>
-						<p>Exp. [ms]</p>
-						<p>Gain [dB]</p>
-						<p>Off. [um]</p>
-						<p>Pow. [%]</p>
-						<p>num z</p>
-						<p>delta z [um]</p>
+						<p class="channel-config-header"></p>
+						<p class="channel-config-header">Channel</p>
+						<p class="channel-config-header"></p>
+						<p class="channel-config-header">Exp. [ms]</p>
+						<p class="channel-config-header">Gain [dB]</p>
+						<p class="channel-config-header">Off. [um]</p>
+						<p class="channel-config-header">Pow. [%]</p>
+						<p class="channel-config-header">num z</p>
+						<p class="channel-config-header">delta z [um]</p>
 
 						<template x-for="channel in microscope_config.channels">
 							<div style="display:contents;">
 								<input x-bind:id="`${channel.handle}-enabled`" type="checkbox"
-									x-model="channel.enabled" />
-								<label x-bind:for="`${channel.handle}-enabled`" x-text="channel.name"></label>
-								<button x-on:click="Actions.snapChannel({channel})">snap</button>
+									x-model="channel.enabled"
+									x-init="enabletooltip($el)"
+									x-bind:tooltip="`
+										Indicates if channel should be imaged during acqusition.
+
+										With the current setting, this channel will ${channel.enabled?'be':'not be'} imaged.
+									`.trimLeft().replaceAll('\n','<br>')"/>
+								<label x-bind:for="`${channel.handle}-enabled`" x-text="channel.name"
+									x-effect="if(channel.enabled){
+										$el.removeAttribute('disabled')
+									}else{
+										$el.setAttribute('disabled','true')
+									}" ></label>
+								<button x-on:click="Actions.snapChannel({channel})"
+									x-effect="if(channel.enabled){
+										$el.removeAttribute('disabled')
+									}else{
+										$el.setAttribute('disabled','true')
+									}" >snap</button>
+
 								<input type="number" min=0.1 step=0.1 max=936 placeholder="5"
 									x-model="channel.exposure_time_ms"
 									x-init="enabletooltip($el),registerNumberInput($el)" x-bind:tooltip="`
 										exposure time in milliseconds.
 
 										range: ${$el.min} - ${$el.max} ( in steps of ${$el.step})
-										`.trimLeft().replaceAll('\n','<br>')" />
+										`.trimLeft().replaceAll('\n','<br>')" 
+									x-effect="if(channel.enabled){
+											$el.removeAttribute('disabled')
+										}else{
+											$el.setAttribute('disabled','true')
+										}" />
 								<input type="number" min=0 step=0.1 max=24 placeholder=0 x-model="channel.analog_gain"
 									x-init="enabletooltip($el),registerNumberInput($el)" x-bind:tooltip="`
 										analog gain in decibels.
 
 										range: ${$el.min} - ${$el.max} ( in steps of ${$el.step})
-										`.trimLeft().replaceAll('\n','<br>')" />
+										`.trimLeft().replaceAll('\n','<br>')"
+									x-effect="if(channel.enabled){
+										$el.removeAttribute('disabled')
+									}else{
+										$el.setAttribute('disabled','true')
+									}" />
 								<input type="number" min=-150 step=0.1 max=+150 placeholder=0
 									x-model="channel.z_offset_um" x-init="enabletooltip($el),registerNumberInput($el)"
 									x-bind:tooltip="`
 										z offset in micrometers.
 
 										range: ${$el.min} - ${$el.max} ( in steps of ${$el.step})
-										`.trimLeft().replaceAll('\n','<br>')" />
+										`.trimLeft().replaceAll('\n','<br>')"
+									x-effect="if(channel.enabled){
+											$el.removeAttribute('disabled')
+										}else{
+											$el.setAttribute('disabled','true')
+										}" />
 								<input type="number" min=1 step=0.1 max=100 placeholder=100 x-model="channel.illum_perc"
 									x-init="enabletooltip($el),registerNumberInput($el)" x-bind:tooltip="`
 										illumination strength as percent of maximum.
 
 										range: ${$el.min} - ${$el.max} ( in steps of ${$el.step})
-										`.trimLeft().replaceAll('\n','<br>')" />
+										`.trimLeft().replaceAll('\n','<br>')"
+									x-effect="if(channel.enabled){
+											$el.removeAttribute('disabled')
+										}else{
+											$el.setAttribute('disabled','true')
+										}" />
 								<input type="number" min=1 step=2 max=999 placeholder=1 x-model="channel.num_z_planes"
 									x-init=" enabletooltip($el),registerNumberInput($el)" x-bind:tooltip="`
 										number of z planes.
 
 										range: ${$el.min} - ${$el.max} ( in steps of ${$el.step})
-										`.trimLeft().replaceAll('\n','<br>')" />
+										`.trimLeft().replaceAll('\n','<br>')" 
+									x-effect="if(channel.enabled){
+											$el.removeAttribute('disabled')
+										}else{
+											$el.setAttribute('disabled','true')
+										}" />
 								<input type=number min=0.1 step=0.1 max=999 placeholder="3" x-model="channel.delta_z_um"
 									x-init="enabletooltip($el),registerNumberInput($el)" x-bind:tooltip="`
 										distance between z planes.
 										
 										range: ${$el.min} - ${$el.max} ( in steps of ${$el.step})
-										`.trimLeft().replaceAll('\n','<br>')" />
+										`.trimLeft().replaceAll('\n','<br>')" 
+									x-effect="if(channel.enabled){
+											$el.removeAttribute('disabled')
+										}else{
+											$el.setAttribute('disabled','true')
+										}" />
 							</div>
 						</template>
 					</div>
