@@ -293,7 +293,7 @@ document.addEventListener('alpine:init', () => {
 
                 const body_str=JSON.stringify(body_copy,null,2);
 
-                console.log("acquisition start body:",body_str);
+                // console.log("acquisition start body:",body_str);
                 return fetch("http://localhost:5002/api/acquisition/start", {
                     method: "POST",
                     body: body_str,
@@ -342,6 +342,8 @@ document.addEventListener('alpine:init', () => {
                     throw error;
                 }
             },
+            /** @type {AcquisitionStatusOut?} */
+            latest_acquisition_status:null,
             /**
              * rpc to /api/acquisition/status
              * @param {AcquisitionStatusRequest} body

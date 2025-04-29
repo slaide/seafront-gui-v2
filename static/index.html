@@ -329,29 +329,148 @@
 
 					<div>
 						<div>
-							<label>Total number of images:</label>
-							<span x-text="num_images"></span>
-							<label>current acquisition:</label>
-							<span x-text="current_acquisition_id??'none'"></span>
-							<div id="acquisition-status"></div>
+							<label>Total number of images:</label><span
+								x-text="num_images"></span>
+							<label>current acquisition:</label><span
+								x-text="current_acquisition_id??'none'"></span>
+							<!-- div id="acquisition-status"></div -->
+							<div style="display:grid;grid-template-columns: auto auto;">
+								<label>latest acquisition id</label><span 
+									x-text="latest_acquisition_status?.acquisition_id??''"></span>
+								<label>progress status</label><span
+									x-text="latest_acquisition_status?.acquisition_status??''"></span>
+								<label>progress message</label><span
+									x-text="latest_acquisition_status?.message??''"></span>
+								<label>comment</label><span
+									x-text="latest_acquisition_status?.acquisition_config.comment??''"></span>
+								<label>num images (acquired / total)</label><span
+									x-text="`${latest_acquisition_status?.acquisition_progress.current_num_images??''} / ${latest_acquisition_status?.acquisition_meta_information.total_num_images??''}`"></span>
+								<label>time [s] (elapsed / total estimated)</label><span
+									x-text="`${latest_acquisition_status?.acquisition_progress.time_since_start_s.toFixed(1)??''} / ${latest_acquisition_status?.acquisition_progress.estimated_remaining_time_s.toFixed(1)??''}`"></span>
+								<label>storage [GB] (occupied / max total)</label><span
+									x-text="`${latest_acquisition_status?.acquisition_progress.current_storage_usage_GB.toFixed(2)??''} / ${latest_acquisition_status?.acquisition_meta_information.max_storage_size_images_GB.toFixed(2)??''}`"></span>
+
+								<div style="display:none;">
+									{
+										"acquisition_id": "PYLC0ODKWBRCEZA7",
+										"acquisition_status": "completed",
+										"acquisition_progress": {
+											"current_num_images": 8,
+											"time_since_start_s": 3.723818778991699, 
+											"start_time_iso": "2025-04-29T15:58:32+00:00", 
+											"current_storage_usage_GB": 0, 
+											"estimated_remaining_time_s": 0, 
+											"last_image": { 
+												"channel": { 
+													"name": "BF LED Left Half", 
+													"handle": "bfledleft", 
+													"illum_perc": 20, 
+													"exposure_time_ms": 5, "analog_gain": 0, "z_offset_um": 0, "num_z_planes": 1, "delta_z_um": 1, "enabled": true 
+												}, 
+												"width_px": 2500, "height_px": 2500, "timestamp": 1745942316.709877, 
+												"position": { 
+													"well_name": "I6", "site_x": 0, "site_y": 0, "site_z": 0, "x_offset_mm": 0, "y_offset_mm": 0, "z_offset_mm": 0, 
+													"position": { 
+														"x_pos_mm": 32.189985546875, "y_pos_mm": 44.569955468749995, "z_pos_mm": 0.99999609375 
+													} 
+												}, 
+												"storage_path": "/home/patrick/seafront/images/placeholderProject/placeholderPlate_2025-04-29T15:58:32+00:00/I6_s0_x1_y1_z1_bfledleft.tiff" 
+											} 
+										},
+										"acquisition_meta_information": { 
+											"total_num_images": 8, 
+											"max_storage_size_images_GB": 0.09313225746154785 
+										}, 
+										"acquisition_config": { 
+											"project_name": "placeholderProject", "plate_name": "placeholderPlate", "cell_line": "placeholderCell", "grid": { 
+												"num_x": 1, "delta_x_mm": 0.9, "num_y": 1, "delta_y_mm": 0.9, 
+												"num_t": 1, "delta_t": { "h": 2, "m": 1, "s": 4 }, 
+												"mask": [ 
+													{ "row": 0, "col": 0, "selected": true } 
+												] 
+											}, 
+											"wellplate_type": { 
+												"Manufacturer": "Revvity", "Model_name": "PhenoPlate 384-well", "Model_id_manufacturer": "6057800", "Model_id": "revvity-phenoplate-384", "Offset_A1_x_mm": 10.5, "Offset_A1_y_mm": 7.36, "Offset_bottom_mm": 0.32799999999999996, "Well_distance_x_mm": 4.5, "Well_distance_y_mm": 4.5, "Well_size_x_mm": 3.26, "Well_size_y_mm": 3.26, "Num_wells_x": 24, "Num_wells_y": 16, "Length_mm": 127.76, "Width_mm": 85.48, "Well_edge_radius_mm": 0.2 
+											}, 
+											"plate_wells": [ 
+												{ "row": 8, "col": 5, "selected": true } 
+											], 
+											"channels": [ 
+												{ 
+													"name": "Fluo 405 nm Ex", "handle": "fluo405", 
+													"illum_perc": 100, "exposure_time_ms": 5, "analog_gain": 0, "z_offset_um": 0, "num_z_planes": 1, 
+													"delta_z_um": 1, "enabled": true 
+												}, 
+												{ 
+													"name": "Fluo 488 nm Ex", "handle": "fluo488", 
+													"illum_perc": 100, "exposure_time_ms": 5, "analog_gain": 0, "z_offset_um": 0, "num_z_planes": 1, 
+													"delta_z_um": 1, "enabled": true 
+												}, 
+												{ 
+													"name": "Fluo 561 nm Ex", "handle": "fluo561", 
+													"illum_perc": 100, "exposure_time_ms": 5, "analog_gain": 0, "z_offset_um": 0, "num_z_planes": 1, 
+													"delta_z_um": 1, "enabled": true 
+												}, 
+												{ 
+													"name": "Fluo 638 nm Ex", "handle": "fluo638", 
+													"illum_perc": 100, "exposure_time_ms": 5, "analog_gain": 0, "z_offset_um": 0, "num_z_planes": 1, 
+													"delta_z_um": 1, "enabled": true 
+												}, { 
+													"name": "Fluo 730 nm Ex", "handle": "fluo730", 
+													"illum_perc": 100, "exposure_time_ms": 5, "analog_gain": 0, "z_offset_um": 0, "num_z_planes": 1, 
+													"delta_z_um": 1, "enabled": true 
+												}, 
+													{ "name": "BF LED Full", "handle": "bfledfull", 
+													"illum_perc": 20, "exposure_time_ms": 5, "analog_gain": 0, "z_offset_um": 0, "num_z_planes": 1, 
+													"delta_z_um": 1, "enabled": true 
+												}, 
+													{ "name": "BF LED Right Half", "handle": "bfledright", 
+													"illum_perc": 20, "exposure_time_ms": 5, "analog_gain": 0, "z_offset_um": 0, "num_z_planes": 1, 
+													"delta_z_um": 1, "enabled": true 
+												}, 
+												{ 
+													"name": "BF LED Left Half", "handle": "bfledleft", 
+													"illum_perc": 20, "exposure_time_ms": 5, "analog_gain": 0, "z_offset_um": 0, "num_z_planes": 1, 
+													"delta_z_um": 1, "enabled": true 
+												} 
+											], 
+											"autofocus_enabled": false, 
+											"machine_config": [], 
+											"comment": "", 
+											"spec_version": { "major": 0, "minor": 0, "patch": 0 },
+											"timestamp": null
+										},
+										"message": "Acquisition is 100.00% complete"
+									}
+								</div>
+							</div>
 						</div>
 						<div>
 							<label>Acquisition:</label>
 							<button
 								x-init="$watch('current_acquisition_id',async ()=>{
-									async function getLatestStatus(){
+									const getLatestStatus=async ()=>{
+										// stop fetching updates if no acquisition is currently running
 										if(current_acquisition_id==null){
 											return;
 										}
 
+										console.log('updated acquisition status')
 										const status=await acquisition_status({acquisition_id:current_acquisition_id});
+										latest_acquisition_status=status;
+
+										// if acquisition is completed, indicate that no acquisition is running anymore
+										if(status.acquisition_status=='completed'){
+											current_acquisition_id=null;
+										}
+
 										const status_element=document.getElementById('acquisition-status');
 										if(status_element){
 											status_element.innerHTML=JSON.stringify(status,null,2).replace('\n ','<br>&nbsp;');
 										}
 
 										$nextTick(getLatestStatus);
-									}
+									};
 									await getLatestStatus();
 								})"
 								x-on:click="await acquisition_start({ config_file: microscope_config })"

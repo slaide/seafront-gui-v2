@@ -254,7 +254,7 @@ declare global {
         start_time_iso:string;
         current_storage_usage_GB:float;
 
-        estimated_total_time_s:float|null;
+        estimated_remaining_time_s:float|null;
     
         last_image:ImageStoreInfo|null;
     };
