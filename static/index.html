@@ -345,7 +345,7 @@
 									x-text="latest_acquisition_status?.acquisition_config.comment??''"></span>
 								<label>num images (acquired / total)</label><span
 									x-text="`${latest_acquisition_status?.acquisition_progress.current_num_images??''} / ${latest_acquisition_status?.acquisition_meta_information.total_num_images??''}`"></span>
-								<label>time [s] (elapsed / total estimated)</label><span
+								<label>time [s] (elapsed / remaining)</label><span
 									x-text="`${latest_acquisition_status?.acquisition_progress.time_since_start_s.toFixed(1)??''} / ${latest_acquisition_status?.acquisition_progress.estimated_remaining_time_s.toFixed(1)??''}`"></span>
 								<label>storage [GB] (occupied / max total)</label><span
 									x-text="`${latest_acquisition_status?.acquisition_progress.current_storage_usage_GB.toFixed(2)??''} / ${latest_acquisition_status?.acquisition_meta_information.max_storage_size_images_GB.toFixed(2)??''}`"></span>
