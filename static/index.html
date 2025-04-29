@@ -25,16 +25,31 @@
 				"three": "https://cdn.jsdelivr.net/npm/three@0.175.0/build/three.module.min.js",
 				"three/addons/": "https://cdn.jsdelivr.net/npm/three@0.175.0/examples/jsm/",
 
-				"platenavigator":   "./src/platenavigator.js",
-				"numberinput":      "./src/numberinput.js",
-				"microscope_setup": "./src/microscope_setup.js",
-				"channelview":      "./src/channelview.js",
-				"tooltip":          "./src/tooltip.js"
+				"platenavigator":   "/src/platenavigator.js",
+				"numberinput":      "/src/numberinput.js",
+				"microscope_setup": "/src/microscope_setup.js",
+				"channelview":      "/src/channelview.js",
+				"tooltip":          "/src/tooltip.js",
+				"tabs":             "/src/tabs.js"
+			}
+		}
+	</script>
+	<script>
+		/**
+		 * add 'disabled' attribute to an element if condition is true, otherwise removes the attribute.
+		 * @param {HTMLElement} el
+		 * @param {function():boolean} condition
+		 * */
+		function disableElement(el, condition) {
+			if (condition()) {
+				el.setAttribute("disabled", "true")
+			} else {
+				el.removeAttribute("disabled")
 			}
 		}
 	</script>
 
-	<script src="src/init.js" type="module"></script>
+	<script src="/src/init.js" type="module"></script>
 
 	<style>
 		.fullwidth {
@@ -58,125 +73,8 @@
 		}
 	</style>
 
-	<style comment="tooltip">
-		.tooltip {
-			border-radius: 0.3em;
-			background: rgb(254, 254, 144);
-			position: absolute;
-			padding: 0.5em 1em;
-			box-shadow:
-				/*x offset*/
-				0
-				/*y offset*/
-				0
-				/*blur radius*/
-				0.6em
-				/*extension length from center on every edge*/
-				0.6em rgba(54, 54, 54, 0.62);
-		}
-	</style>
-	<script comment="tabs">
-		/**
-		 * @param{HTMLElement} el
-		 */
-		function initTabs(el) {
-			el.tabs = []
-			el.classList.add("tabs")
-
-			function activateTab(el) {
-				// hide previous element
-				el.parentElement.activeTab?.classList.add("hidden")
-				el.parentElement.activeTab?.header.classList.remove("active")
-				// set new element as active
-				el.parentElement.activeTab = el
-				el.classList.remove("hidden")
-
-				el.header.classList.add("active")
-			}
-
-			for (let child of el.children) {
-				// skip elements that are not visual
-				if (["style", "script"].indexOf(child.tagName.toLowerCase()) != -1) continue;
-
-				el.tabs.push(child)
-				child.classList.add("tab")
-				child.classList.add("hidden")
-			}
-
-			let tabbar = document.createElement("div")
-			tabbar.classList.add("tabbar")
-			let child_i = -1
-			for (let child of el.tabs) {
-				child_i++
-
-				let tabheader = document.createElement("div")
-				child.header = tabheader
-
-				tabheader.classList.add("tabheader")
-				let tabname = child.getAttribute("tabname")
-				if (!tabname) {
-					console.warn("Tab has no tabname", child_i, child)
-					tabname = `Tab ${child_i}`
-				}
-				tabheader.innerText = tabname
-				tabbar.appendChild(tabheader)
-
-				tabheader.addEventListener("click", () => activateTab(child))
-			}
-
-			// activate first tab
-			tabbar.children[0]?.click()
-
-			if (el.tabs.length == 0) {
-				el.appendChild(tabbar)
-			} else {
-				el.insertBefore(tabbar, el.tabs[0])
-			}
-		}
-	</script>
-	<style comment="tabs">
-		.tabs {
-			display: block;
-
-			.tabbar {
-				display: grid;
-
-				grid-auto-flow: column;
-				justify-content: start;
-				gap: 0 1em;
-
-				overflow-x: auto;
-				overflow-y: hidden;
-
-				--border-size: 1px;
-
-				.tabheader.active {
-					border: var(--border-size) solid black;
-				}
-
-				.tabheader {
-					display: inline-block;
-					cursor: pointer;
-
-					padding: 0.1em 0.6em;
-					background: lightgrey;
-
-					border-radius: 0.5em 0.5em 0 0;
-
-					/*keep element size consistent with .active*/
-					border: var(--border-size) solid transparent;
-				}
-
-				border-bottom: 1px solid black;
-			}
-
-			.tab {}
-
-			.tab.hidden {
-				display: none;
-			}
-		}
-	</style>
+	<link href="/styles/tooltip.css" rel="stylesheet">
+	<link href="/styles/tabs.css" rel="stylesheet">
 </head>
 
 <body>
@@ -185,27 +83,9 @@
 			font-size:0.9em;
 			font-family:Arial, Helvetica, sans-serif;
 		}
-		#loadingscreen {
-			position: absolute;
-
-			#loadingscreentext{
-				position:absolute;
-
-				font-size:3em;
-
-				left:50%;
-				top:50%;
-				transform:translate(-50%,-50%);
-			};
-
-			width: 100vw;
-			height: 100vh;
-
-			z-index: 10;
-			background: black;
-			color: white;
-		}
 	</style>
+
+	<link href="/styles/loadingscreen.css" rel="stylesheet">
 	<div id="loadingscreen" x-init="$nextTick(()=>{$el.style.display='none'})">
 		<div id="loadingscreentext">Loading Seafront ...</div>
 	</div>
@@ -296,9 +176,15 @@
 			</div>
 		</div>
 
+		<style>
+			#acquisitioncontroltab{
+				height:100%;
+				overflow-y: auto;
+			}
+		</style>
 		<div id="rightcol" style="grid-area: b;">
 			<div x-init="initTabs($el)">
-				<div tabname="Acquisition Control">
+				<div id="acquisitioncontroltab" tabname="Acquisition Control">
 					<div id="names" class="scrolly">
 						<style>
 							#names {
@@ -314,6 +200,7 @@
 						<label>project name</label><input type=text x-model="microscope_config.project_name">
 						<label>plate name</label><input type=text x-model="microscope_config.plate_name">
 						<label>cell line[s]</label><input type=text x-model="microscope_config.cell_line">
+						<label>comment</label><textarea x-model="microscope_config.comment"></textarea>
 					</div>
 
 					<div id="grid-config" class="scrolly">
@@ -338,7 +225,7 @@
 							x-on:change="updatePlate" x-model="microscope_config.grid.num_x">
 
 						<label style="grid-area:l-d-x;">delta x [mm]</label>
-						<input style="grid-area:v-d-x;" x-effect="enableEl($el,microscope_config.grid.num_x)"
+						<input style="grid-area:v-d-x;" x-effect="disableElement($el,()=>microscope_config.grid.num_x==1)"
 							type="number" min="0.1" max="999" step="0.1" x-on:change="updatePlate"
 							x-model="microscope_config.grid.delta_x_mm">
 
@@ -347,7 +234,7 @@
 							x-on:change="updatePlate" x-model="microscope_config.grid.num_y">
 
 						<label style="grid-area:l-d-y;">delta y [mm]</label>
-						<input style="grid-area:v-d-y;" x-effect="enableEl($el,microscope_config.grid.num_y)"
+						<input style="grid-area:v-d-y;" x-effect="disableElement($el,()=>microscope_config.grid.num_y==1)"
 							type="number" min="0.1" max="999" step="0.1" x-on:change="updatePlate"
 							x-model="microscope_config.grid.delta_y_mm">
 
@@ -357,24 +244,15 @@
 
 						<label style="grid-area:l-d-t;">delta t</label>
 						<label style="grid-area:l-d-t-h;">h</label>
-						<script>
-							function enableEl(el, num_t) {
-								if (num_t == 1) {
-									el.setAttribute("disabled", "")
-								} else {
-									el.removeAttribute("disabled")
-								}
-							}
-						</script>
-						<input x-effect="enableEl($el,microscope_config.grid.num_t)" style="grid-area:v-d-t-h;"
+						<input x-effect="disableElement($el,()=>microscope_config.grid.num_t==1)" style="grid-area:v-d-t-h;"
 							type="number" min="0" max="999" step="0.1" x-on:change="updatePlate"
 							x-model="microscope_config.grid.delta_t.h">
 						<label style="grid-area:l-d-t-m;">m</label>
-						<input x-effect="enableEl($el,microscope_config.grid.num_t)" style="grid-area:v-d-t-m;"
+						<input x-effect="disableElement($el,()=>microscope_config.grid.num_t==1)" style="grid-area:v-d-t-m;"
 							type="number" min="0" max="59.9" step="0.1" x-on:change="updatePlate"
 							x-model="microscope_config.grid.delta_t.m">
 						<label style="grid-area:l-d-t-s;">s</label>
-						<input x-effect="enableEl($el,microscope_config.grid.num_t)" style="grid-area:v-d-t-s;"
+						<input x-effect="disableElement($el,()=>microscope_config.grid.num_t==1)" style="grid-area:v-d-t-s;"
 							type="number" min="0" max="59.9" step="0.1" x-on:change="updatePlate"
 							x-model="microscope_config.grid.delta_t.s">
 					</div>
@@ -450,8 +328,38 @@
 					</div>
 
 					<div>
-						<label>Total number of images:</label>
-						<p x-text="num_images"></p>
+						<div>
+							<label>Total number of images:</label>
+							<span x-text="num_images"></span>
+							<label>current acquisition:</label>
+							<span x-text="current_acquisition_id??'none'"></span>
+							<div id="acquisition-status"></div>
+						</div>
+						<div>
+							<label>Acquisition:</label>
+							<button
+								x-init="$watch('current_acquisition_id',async ()=>{
+									async function getLatestStatus(){
+										if(current_acquisition_id==null){
+											return;
+										}
+
+										const status=await acquisition_status({acquisition_id:current_acquisition_id});
+										const status_element=document.getElementById('acquisition-status');
+										if(status_element){
+											status_element.innerHTML=JSON.stringify(status,null,2).replace('\n ','<br>&nbsp;');
+										}
+
+										$nextTick(getLatestStatus);
+									}
+									await getLatestStatus();
+								})"
+								x-on:click="await acquisition_start({ config_file: microscope_config })"
+								>Start</button>
+							<button
+								x-on:click="await acquisition_stop({ acquisition_id: current_acquisition_id })"
+								>Stop</button>
+						</div>
 					</div>
 				</div>
 				<div tabname="Lighting and Focus">
@@ -487,17 +395,9 @@
 										With the current setting, this channel will ${channel.enabled?'be':'not be'} imaged.
 									`.trimLeft().replaceAll('\n','<br>')"/>
 								<label x-bind:for="`${channel.handle}-enabled`" x-text="channel.name"
-									x-effect="if(channel.enabled){
-										$el.removeAttribute('disabled')
-									}else{
-										$el.setAttribute('disabled','true')
-									}" ></label>
+									x-effect="disableElement($el,()=>!channel.enabled)" ></label>
 								<button x-on:click="Actions.snapChannel({channel})"
-									x-effect="if(channel.enabled){
-										$el.removeAttribute('disabled')
-									}else{
-										$el.setAttribute('disabled','true')
-									}" >snap</button>
+									x-effect="disableElement($el,()=>!channel.enabled)" >snap</button>
 
 								<input type="number" min=0.1 step=0.1 max=936 placeholder="5"
 									x-model="channel.exposure_time_ms"
@@ -506,22 +406,14 @@
 
 										range: ${$el.min} - ${$el.max} ( in steps of ${$el.step})
 										`.trimLeft().replaceAll('\n','<br>')" 
-									x-effect="if(channel.enabled){
-											$el.removeAttribute('disabled')
-										}else{
-											$el.setAttribute('disabled','true')
-										}" />
+									x-effect="disableElement($el,()=>!channel.enabled)" />
 								<input type="number" min=0 step=0.1 max=24 placeholder=0 x-model="channel.analog_gain"
 									x-init="enabletooltip($el),registerNumberInput($el)" x-bind:tooltip="`
 										analog gain in decibels.
 
 										range: ${$el.min} - ${$el.max} ( in steps of ${$el.step})
 										`.trimLeft().replaceAll('\n','<br>')"
-									x-effect="if(channel.enabled){
-										$el.removeAttribute('disabled')
-									}else{
-										$el.setAttribute('disabled','true')
-									}" />
+									x-effect="disableElement($el,()=>!channel.enabled)" />
 								<input type="number" min=-150 step=0.1 max=+150 placeholder=0
 									x-model="channel.z_offset_um" x-init="enabletooltip($el),registerNumberInput($el)"
 									x-bind:tooltip="`
@@ -529,44 +421,28 @@
 
 										range: ${$el.min} - ${$el.max} ( in steps of ${$el.step})
 										`.trimLeft().replaceAll('\n','<br>')"
-									x-effect="if(channel.enabled){
-											$el.removeAttribute('disabled')
-										}else{
-											$el.setAttribute('disabled','true')
-										}" />
+									x-effect="disableElement($el,()=>!channel.enabled)" />
 								<input type="number" min=1 step=0.1 max=100 placeholder=100 x-model="channel.illum_perc"
-									x-init="enabletooltip($el),registerNumberInput($el)" x-bind:tooltip="`
+									x-init="enabletooltip($el),registerNumberInput($el),$nextTick(()=>$dispatch('blur'))" x-bind:tooltip="`
 										illumination strength as percent of maximum.
 
 										range: ${$el.min} - ${$el.max} ( in steps of ${$el.step})
 										`.trimLeft().replaceAll('\n','<br>')"
-									x-effect="if(channel.enabled){
-											$el.removeAttribute('disabled')
-										}else{
-											$el.setAttribute('disabled','true')
-										}" />
+									x-effect="disableElement($el,()=>!channel.enabled)" />
 								<input type="number" min=1 step=2 max=999 placeholder=1 x-model="channel.num_z_planes"
 									x-init=" enabletooltip($el),registerNumberInput($el)" x-bind:tooltip="`
 										number of z planes.
 
 										range: ${$el.min} - ${$el.max} ( in steps of ${$el.step})
 										`.trimLeft().replaceAll('\n','<br>')" 
-									x-effect="if(channel.enabled){
-											$el.removeAttribute('disabled')
-										}else{
-											$el.setAttribute('disabled','true')
-										}" />
+									x-effect="disableElement($el,()=>!channel.enabled)" />
 								<input type=number min=0.1 step=0.1 max=999 placeholder="3" x-model="channel.delta_z_um"
 									x-init="enabletooltip($el),registerNumberInput($el)" x-bind:tooltip="`
 										distance between z planes.
 										
 										range: ${$el.min} - ${$el.max} ( in steps of ${$el.step})
 										`.trimLeft().replaceAll('\n','<br>')" 
-									x-effect="if(channel.enabled){
-											$el.removeAttribute('disabled')
-										}else{
-											$el.setAttribute('disabled','true')
-										}" />
+									x-effect="disableElement($el,()=>!channel.enabled)" />
 							</div>
 						</template>
 					</div>
@@ -645,25 +521,25 @@
 						<label>move x [mm]</label>
 						<input x-init="registerNumberInput($el)" type=number step=0.1 min="0.1" max="9999"
 							x-model="actionInput.move_by_x_mm">
-						<button x-on:click="await Actions.moveBy('x',actionInput.move_by_x_mm)">forward</button>
-						<button x-on:click="await Actions.moveBy('x',-1*actionInput.move_by_x_mm)">backward</button>
+						<button x-on:click="await Actions.moveBy({ axis: 'x', distance_mm: actionInput.move_by_x_mm})">forward</button>
+						<button x-on:click="await Actions.moveBy({ axis: 'x', distance_mm: -1*actionInput.move_by_x_mm})">backward</button>
 
 						<span>y position [mm]</span>
 						<span x-text="state.adapter_state?.stage_position.y_pos_mm.toFixed(3)"></span>
 						<label>move y [mm]</label>
 						<input x-init="registerNumberInput($el)" type=number step=0.1 min="0.1" max="9999"
 							x-model="actionInput.move_by_y_mm">
-						<button x-on:click="await Actions.moveBy('y',actionInput.move_by_y_mm)">forward</button>
-						<button x-on:click="await Actions.moveBy('y',-1*actionInput.move_by_y_mm)">backward</button>
+						<button x-on:click="await Actions.moveBy({ axis: 'y', distance_mm: actionInput.move_by_y_mm})">forward</button>
+						<button x-on:click="await Actions.moveBy({ axis: 'y', distance_mm: -1*actionInput.move_by_y_mm})">backward</button>
 
 						<span>z position [um]</span>
 						<span x-text="(state.adapter_state?.stage_position.z_pos_mm*1e3).toFixed(1)"></span>
 						<label>move z [um]</label>
 						<input x-init="registerNumberInput($el)" type=number step=0.1 min="0.1" max="9999"
 							x-model="actionInput.move_by_z_um">
-						<button x-on:click="await Actions.moveBy('z',actionInput.move_by_z_um*1e-3)">forward</button>
+						<button x-on:click="await Actions.moveBy({ axis: 'z', distance_mm: actionInput.move_by_z_um*1e-3})">forward</button>
 						<button
-							x-on:click="await Actions.moveBy('z',-1*actionInput.move_by_z_um*1e-3)">backward</button>
+							x-on:click="await Actions.moveBy({ axis: 'z', distance_mm: -1*actionInput.move_by_z_um*1e-3})">backward</button>
 					</div>
 					<div id="loading-position-control" class="scrolly">
 						<button x-on:click="await Actions.enterLoadingPosition()">enter loading position</button>

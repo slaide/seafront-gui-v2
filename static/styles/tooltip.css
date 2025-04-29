@@ -1,0 +1,15 @@
+.tooltip {
+    border-radius: 0.3em;
+    background: rgb(254, 254, 144);
+    position: absolute;
+    padding: 0.5em 1em;
+    box-shadow:
+        /*x offset*/
+        0
+        /*y offset*/
+        0
+        /*blur radius*/
+        0.6em
+        /*extension length from center on every edge*/
+        0.6em rgba(54, 54, 54, 0.62);
+}

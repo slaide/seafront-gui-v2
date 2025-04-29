@@ -39,15 +39,14 @@ export function getPlateTypes() {
         /** @type {Wellplate} */
         const newplate = structuredClone(value)
 
-        newplate.numwells = newplate.Num_wells_x * newplate.Num_wells_y
         plateinfo.allplates.push(newplate)
 
         /** @type {WellPlateGroup|undefined} */
-        let plategroup = plateinfo.plategroups.find(g => g.numwells == newplate.numwells)
+        let plategroup = plateinfo.plategroups.find(g => g.numwells == newplate.Num_wells_x*newplate.Num_wells_y)
         if (!plategroup) {
             plategroup = {
-                label: `${newplate.numwells} well plate`,
-                numwells: newplate.numwells,
+                label: `${newplate.Num_wells_x*newplate.Num_wells_y} well plate`,
+                numwells: newplate.Num_wells_x*newplate.Num_wells_y,
                 plates: [],
             }
             plateinfo.plategroups.push(plategroup)
@@ -90,7 +89,7 @@ export function defaultConfig() {
                 s: 4,
             },
 
-            masks: [{ row: 0, col: 0, selected: true }]
+            mask: [{ row: 0, col: 0, selected: true }]
         },
 
         // some [arbitrary] default
@@ -110,8 +109,7 @@ export function defaultConfig() {
             "Num_wells_y": 16,
             "Length_mm": 127.76,
             "Width_mm": 85.48,
-            "Well_edge_radius_mm": 0.1,
-            "numwells": 384
+            "Well_edge_radius_mm": 0.1
         },
 
         plate_wells: [{ col: 0, row: 0, selected: true }],
@@ -119,7 +117,7 @@ export function defaultConfig() {
         channels: getHardwareCapabilities().main_camera_imaging_channels,
 
         machine_config: []/*getMachineDefaults()*/,
-        comment: null,
+        comment: "",
         spec_version: {
             major: 0,
             minor: 0,

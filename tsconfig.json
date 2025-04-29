@@ -22,7 +22,9 @@
             "three/addons/utils/BufferGeometryUtils.js": [
                 "types/three-buffergeometryutils.d.ts"
             ]
-        }
+        },
+        /* indicate that we do not want to emit compiled output files */
+        "noEmit": true
     },
     "include": [
         "./**/*",

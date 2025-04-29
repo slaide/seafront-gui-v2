@@ -586,7 +586,7 @@ class PlateNavigator {
         }, this.matSite)
         /**@type {THREE.InstancedMesh|null} */
         let site_quads = null
-        let num_sites = valid_wells.length * microscope_config.grid.masks.map(s => 1).reduce((v, o) => v + o, 0)
+        let num_sites = valid_wells.length * microscope_config.grid.mask.map(s => 1).reduce((v, o) => v + o, 0)
         if (!this.scene.getObjectByName(objectNameSites)) {
             site_quads = new THREE.InstancedMesh(
                 site_quad.geometry,
@@ -647,7 +647,7 @@ class PlateNavigator {
             if (site_quads != null) {
                 // add well to display, but skip sites, if well is not selected
                 if (well.selected) {
-                    for (let site of microscope_config.grid.masks) {
+                    for (let site of microscope_config.grid.mask) {
                         if (!site.selected) {
                             continue
                         }

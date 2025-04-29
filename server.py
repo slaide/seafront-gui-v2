@@ -14,12 +14,7 @@ settings = Settings()
 # Create a Starlette application and mount static files
 app = FastAPI()
 
-@app.get("/")
-def retmain():
-    return FileResponse("./index.html")
-
-app.mount("/src", StaticFiles(directory="./src", html=True), name="static_src")
-app.mount("/resources", StaticFiles(directory="./resources", html=True), name="static_resources")
+app.mount("/", StaticFiles(directory="./static", html=True), name="static")
 
 if __name__ == "__main__":
     uvicorn.run(app, host=settings.host, port=settings.port)
