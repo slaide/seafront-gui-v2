@@ -28,7 +28,6 @@ Object.assign(window, { initTabs });
 // import alpine, and start
 import { Alpine } from "alpine";
 window.addEventListener("load", () => {
-    console.log("starting alpine")
     Alpine.start()
 })
 
@@ -377,12 +376,10 @@ document.addEventListener('alpine:init', () => {
 
                 /**
                  * 
-                 * @param {MoveToWellRequest} request
+                 * @param {MoveToWellRequest} body
                  * @returns {Promise<MoveToWellResponse>}
                  */
-                moveToWell(request) {
-                    const body = request
-
+                moveToWell(body) {
                     return fetch("http://localhost:5002/api/action/move_to_well", {
                         method: "POST",
                         body: JSON.stringify(body),
@@ -394,11 +391,10 @@ document.addEventListener('alpine:init', () => {
 
                 /**
                  * 
-                 * @param {ChannelSnapshotRequest} request 
+                 * @param {ChannelSnapshotRequest} body 
                  * @returns {Promise<ChannelSnapshotResponse>}
                  */
-                snapChannel(request) {
-                    const body = request
+                snapChannel(body) {
                     return fetch("http://localhost:5002/api/action/snap_channel", {
                         method: "POST",
                         body: JSON.stringify(body),
@@ -420,7 +416,6 @@ document.addEventListener('alpine:init', () => {
                             ["Content-Type", "application/json"]
                         ]
                     }).then(v => v.json()).then(v => {
-                        console.log(v)
                         return v
                     })
                 },
@@ -436,17 +431,14 @@ document.addEventListener('alpine:init', () => {
                             ["Content-Type", "application/json"]
                         ]
                     }).then(v => v.json()).then(v => {
-                        console.log(v)
                         return v
                     })
                 },
                 /**
-                 * @param {StreamBeginRequest} request
+                 * @param {StreamBeginRequest} body
                  * @returns {Promise<StreamingStartedResponse>}
                  */
-                streamBegin(request) {
-                    const body = request
-
+                streamBegin(body) {
                     return fetch("http://localhost:5002/api/action/stream_channel_begin", {
                         method: "POST",
                         body: JSON.stringify(body),
@@ -459,12 +451,10 @@ document.addEventListener('alpine:init', () => {
                     })
                 },
                 /**
-                 * @param {StreamEndRequest} request
+                 * @param {StreamEndRequest} body
                  * @returns {Promise<StreamEndResponse>}
                  */
-                streamEnd(request) {
-                    const body = request
-
+                streamEnd(body) {
                     return fetch("http://localhost:5002/api/action/stream_channel_end", {
                         method: "POST",
                         body: JSON.stringify(body),

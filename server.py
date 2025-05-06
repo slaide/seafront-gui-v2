@@ -12,21 +12,15 @@ class Settings(BaseModel):
 
 settings = Settings()
 
-# Create a Starlette application and mount static files
 app = FastAPI()
 
 app.mount("/", StaticFiles(directory="./static", html=True), name="static")
 
 if __name__ == "__main__":
     config = Config()
-
     config.bind = [ f"{settings.host}:{settings.port}" ]
-
-    # send access logs to stdout
-    config.accesslog = "-"
-    # (optionally) set a format string
+    config.accesslog = "-" # write log to stdout
     config.access_log_format = ( '"%(r)s" %(s)s' )
-    # make sure info-level logs appear
     config.loglevel = "info"
 
     asyncio.run(serve(app, config)) # type: ignore

@@ -2,11 +2,11 @@
 
 import * as THREE from 'three';
 // just used for webgl availability checks
-import WebGL from 'three/addons/capabilities/WebGL.js';
+import WebGL from 'three/addons/capabilities/WebGL';
 // to load a font for well texts
-import { FontLoader } from 'three/addons/loaders/FontLoader.js';
+import { FontLoader } from 'three/addons/loaders/FontLoader';
 // to merge buffer geometries to draw all well text in a single common call
-import * as BufferGeometryUtils from 'three/addons/utils/BufferGeometryUtils.js';
+import * as BufferGeometryUtils from 'three/addons/utils/BufferGeometryUtils';
 
 /**
  * make well name

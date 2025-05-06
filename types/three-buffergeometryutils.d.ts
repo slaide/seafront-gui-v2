@@ -1,5 +1,5 @@
 import { Geometry } from "three";
-declare module "three/addons/utils/BufferGeometryUtils.js" {
+declare module "three/addons/utils/BufferGeometryUtils" {
     function mergeGeometries(geometries: Geometry[]): Geometry;
 }
 

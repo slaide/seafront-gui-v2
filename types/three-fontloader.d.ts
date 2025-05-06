@@ -1,6 +1,6 @@
 import { Font } from "three";
 
-declare module "three/addons/loaders/FontLoader.js" {
+declare module "three/addons/loaders/FontLoader" {
     class FontLoader {
         constructor();
 

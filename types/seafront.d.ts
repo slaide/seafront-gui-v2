@@ -14,21 +14,21 @@ declare global {
     type AcquisitionChannelConfig = {
         name: string;
         handle: string;
-        analog_gain: number;
-        exposure_time_ms: number;
-        illum_perc: number;
-        num_z_planes: number;
-        z_offset_um: number;
+        analog_gain: float;
+        exposure_time_ms: float;
+        illum_perc: float;
+        num_z_planes: int;
+        z_offset_um: float;
         enabled: boolean;
     };
 
     type ChannelInfo = {
         channel: AcquisitionChannelConfig;
-        height_px: number;
-        width_px: number;
+        height_px: int;
+        width_px: int;
         storage_path: string | undefined;
         position: {};
-        timestamp: number;
+        timestamp: float;
     };
 
     /**
@@ -39,9 +39,9 @@ declare global {
             is_in_loading_position: boolean;
             state: "idle";
             stage_position: {
-                x_pos_mm: number;
-                y_pos_mm: number;
-                z_pos_mm: number;
+                x_pos_mm: float;
+                y_pos_mm: float;
+                z_pos_mm: float;
             };
         };
         current_acquisition_id: string | undefined;
@@ -50,31 +50,31 @@ declare global {
         };
     };
     type Version = {
-        major: number;
-        minor: number;
-        patch: number;
+        major: int;
+        minor: int;
+        patch: int;
     };
     type AcquisitionWellSiteConfigurationSiteSelectionItem = {
-        row: number;
-        col: number;
+        row: int;
+        col: int;
         selected: boolean;
     };
     type AcquisitionWellSiteConfiguration = {
-        num_x: number;
-        delta_x_mm: number;
-        num_y: number;
-        delta_y_mm: number;
-        num_t: number;
+        num_x: int;
+        delta_x_mm: float;
+        num_y: int;
+        delta_y_mm: float;
+        num_t: int;
         delta_t: {
-            h: number;
-            m: number;
-            s: number;
+            h: float;
+            m: float;
+            s: float;
         };
         mask: AcquisitionWellSiteConfigurationSiteSelectionItem[];
     };
     type PlateWellConfig = {
-        row: number;
-        col: number;
+        row: int;
+        col: int;
         selected: boolean;
     };
     type AcquisitionConfig = {
@@ -93,17 +93,17 @@ declare global {
     };
 
     type CachedChannelImage = {
-        height: number;
-        width: number;
-        bit_depth: number;
-        camera_bit_depth: number;
+        height: int;
+        width: int;
+        bit_depth: int;
+        camera_bit_depth: int;
         data: ArrayBuffer;
         info: ChannelInfo;
     };
 
     type ChannelImageData = {
-        width: number;
-        height: number;
+        width: int;
+        height: int;
         data: ArrayBuffer | Uint16Array | Uint8Array;
         texture: THREE.DataTexture;
         mesh: THREE.Mesh;
@@ -121,14 +121,14 @@ declare global {
 
 declare global {
     type Pos2 = {
-        x: number;
-        y: number;
+        x: float;
+        y: float;
     };
     type AABB = {
-        ax: number;
-        ay: number;
-        bx: number;
-        by: number;
+        ax: float;
+        ay: float;
+        bx: float;
+        by: float;
     };
 }
 
@@ -138,29 +138,29 @@ declare global {
         Model_id: string;
         Model_id_manufacturer: string;
         Model_name: string;
-        Num_wells_x: number;
-        Num_wells_y: number;
-        Offset_A1_x_mm: number;
-        Offset_A1_y_mm: number;
-        Width_mm: number;
-        Length_mm: number;
-        Offset_bottom_mm: number;
-        Well_distance_x_mm: number;
-        Well_distance_y_mm: number;
-        Well_size_x_mm: number;
-        Well_size_y_mm: number;
-        Well_edge_radius_mm: number;
+        Num_wells_x: int;
+        Num_wells_y: int;
+        Offset_A1_x_mm: float;
+        Offset_A1_y_mm: float;
+        Width_mm: float;
+        Length_mm: float;
+        Offset_bottom_mm: float;
+        Well_distance_x_mm: float;
+        Well_distance_y_mm: float;
+        Well_size_x_mm: float;
+        Well_size_y_mm: float;
+        Well_edge_radius_mm: float;
     };
 
     type BasicSuccessResponse = {};
 
     type MoveByRequest = {
         axis:"x"|"y"|"z";
-        distance_mm:number;
+        distance_mm:float;
     };
     type MoveByResult = {
         axis: string;
-        moved_by_mm: number;
+        moved_by_mm: float;
     };
     // truly empty
     type MoveToWellRequest = {
@@ -180,7 +180,7 @@ declare global {
     type ChannelSnapshotResponse = ImageAcquiredResponse;
 
     type StreamBeginRequest = {
-        framerate_hz: number;
+        framerate_hz: float;
         channel: AcquisitionChannelConfig;
 
         machine_config?: MachineConfigItem[];
