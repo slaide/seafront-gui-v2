@@ -1,7 +1,8 @@
+import asyncio
 from pydantic import BaseModel
-import uvicorn
+from hypercorn.asyncio import serve
+from hypercorn.config import Config
 from fastapi import FastAPI
-from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 # Use Pydantic to manage settings
@@ -17,4 +18,15 @@ app = FastAPI()
 app.mount("/", StaticFiles(directory="./static", html=True), name="static")
 
 if __name__ == "__main__":
-    uvicorn.run(app, host=settings.host, port=settings.port)
+    config = Config()
+
+    config.bind = [ f"{settings.host}:{settings.port}" ]
+
+    # send access logs to stdout
+    config.accesslog = "-"
+    # (optionally) set a format string
+    config.access_log_format = ( '"%(r)s" %(s)s' )
+    # make sure info-level logs appear
+    config.loglevel = "info"
+
+    asyncio.run(serve(app, config)) # type: ignore
