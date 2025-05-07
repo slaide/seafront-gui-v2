@@ -1,39 +1,96 @@
 "use strict";
 
 /**
- * @returns {HardwareCapabilities}
+ * @returns {Promise<HardwareCapabilities>}
  */
-export function getHardwareCapabilities() {
-    let plateinfo = {}
+export async function getHardwareCapabilities() {
+    const plateinfo=await fetch("http://localhost:5002/api/get_features/hardware_capabilities",{
+        method:"POST",
+        body:"{}",
+        headers: [
+            ["Content-Type", "application/json"]
+        ]
+    }).then(v=>{
+        /** @ts-ignore @type {CheckMapSquidRequestFn<HardwareCapabilities,InternalErrorModel>} */
+        const check=checkMapSquidRequest;
+        return check(v)
+    });
 
-    let xhr = new XMLHttpRequest()
-    xhr.open("POST", "http://localhost:5002/api/get_features/hardware_capabilities", false)
-    xhr.onload = ev => {
-        let data = JSON.parse(xhr.response)
+    return plateinfo;
+}
+/**
+ * @returns {Promise<MachineDefaults>}
+ */
+export async function getMachineDefaults(){
+    const machinedefaults=await fetch("http://localhost:5002/api/get_features/machine_defaults",{
+        method:"POST",
+        body:"{}",
+        headers: [
+            ["Content-Type", "application/json"]
+        ]
+    }).then(v=>{
+        /** @ts-ignore @type {CheckMapSquidRequestFn<MachineDefaults,InternalErrorModel>} */
+        const check=checkMapSquidRequest;
+        return check(v)
+    });
 
-        plateinfo = data
-    }
-    xhr.setRequestHeader("Content-Type", "application/json")
-    xhr.send("{}")
-
-    /** @ts-ignore */
-    return plateinfo
+    return machinedefaults;
 }
 
-/** @typedef {{label:string, numwells:number, plates:Wellplate[]}} WellPlateGroup */
+/**
+ * @returns {Promise<ConfigListResponse>}
+ */
+export async function getConfigList(){
+    const configlist=await fetch("http://localhost:5002/api/acquisition/config_list",{
+        method:"POST",
+        body:"{}",
+        headers: [
+            ["Content-Type", "application/json"]
+        ]
+    }).then(v=>{
+        /** @ts-ignore @type {CheckMapSquidRequestFn<ConfigListResponse,InternalErrorModel>} */
+        const check=checkMapSquidRequest;
+        return check(v)
+    });
+    console.log("configlistresponse",configlist)
+
+    return configlist;
+}
+
+/**
+ * @param {StoreConfigRequest} body
+ * @returns {Promise<StoreConfigResponse>}
+ */
+export async function storeConfig(body){
+    const response=await fetch("http://localhost:5002/api/acquisition/config_store",{
+        method:"POST",
+        body:JSON.stringify(body),
+        headers: [
+            ["Content-Type", "application/json"]
+        ]
+    }).then(v=>{
+        /** @ts-ignore @type {CheckMapSquidRequestFn<StoreConfigResponse,InternalErrorModel>} */
+        const check=checkMapSquidRequest;
+        return check(v);
+    });
+
+    console.log(`got response`,response);
+
+    return response;
+}
 
 /**
  * get plate types from server
- * @returns {{plategroups:WellPlateGroup[],allplates:Wellplate[]}}
+ * @returns {Promise<{plategroups:WellPlateGroup[],allplates:Wellplate[]}>}
  * */
-export function getPlateTypes() {
-    let data = getHardwareCapabilities()
+export async function getPlateTypes() {
+    let data = await getHardwareCapabilities();
 
     /** @type {{plategroups:WellPlateGroup[],allplates:Wellplate[]}} */
-    let plateinfo = { allplates: [], plategroups: [] }
+    let plateinfo = { allplates: [], plategroups: [] };
 
     for (const key in data.wellplate_types) {
-        const value = data.wellplate_types[key]
+        const value = data.wellplate_types[key];
 
         // make copy of plate type
         /** @type {Wellplate} */
@@ -61,17 +118,17 @@ export function getPlateTypes() {
 }
 
 /**
- * @return {AcquisitionConfig}
+ * @return {Promise<AcquisitionConfig>}
  **/
-export function defaultConfig() {
+export async function defaultConfig() {
     /** @ts-ignore @type {AcquisitionConfig} */
     let microscope_config = {}
 
     /** @type {AcquisitionConfig} */
     let referenceConfig = {
-        project_name: "placeholderProject",
-        plate_name: "placeholderPlate",
-        cell_line: "placeholderCell",
+        project_name: "",
+        plate_name: "",
+        cell_line: "",
 
         autofocus_enabled: false,
 
@@ -114,9 +171,9 @@ export function defaultConfig() {
 
         plate_wells: [{ col: 0, row: 0, selected: true }],
 
-        channels: getHardwareCapabilities().main_camera_imaging_channels,
+        channels: (await getHardwareCapabilities()).main_camera_imaging_channels,
 
-        machine_config: []/*getMachineDefaults()*/,
+        machine_config: await getMachineDefaults(),
         comment: "",
         spec_version: {
             major: 0,

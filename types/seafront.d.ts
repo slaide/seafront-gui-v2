@@ -133,6 +133,9 @@ declare global {
 }
 
 declare global {
+
+    type CheckMapSquidRequestFn<T,E>=(v:Response)=>Promise<T>;
+
     type Wellplate = {
         Manufacturer: string;
         Model_id: string;
@@ -152,6 +155,12 @@ declare global {
         Well_edge_radius_mm: float;
     };
 
+    type WellPlateGroup={
+        label:string;
+        numwells:number;
+        plates:Wellplate[];
+    };
+
     type BasicSuccessResponse = {};
 
     type MoveByRequest = {
@@ -168,9 +177,6 @@ declare global {
         well_name: string;
     };
     type MoveToWellResponse = BasicSuccessResponse;
-
-    type ConfigItem = {};
-    type MachineConfigItem = ConfigItem;
 
     type ImageAcquiredResponse = {}
     type ChannelSnapshotRequest = {
@@ -204,6 +210,39 @@ declare global {
         wellplate_types: Wellplate[];
     };
 
+    type ConfigItemOption={
+        name: string;
+        handle: string;
+        /** can be anything, e.g. (actual example): object {"magnification":4} */
+        info: any|null;
+    };
+    type ConfigItem = {
+        name: string;
+        handle: string;
+        value_kind: "int"|"float"|"text"|"option"|"action";
+        value: int|float|string;
+        frozen: boolean;
+        options: (ConfigItemOption[])|null;
+    };
+    type MachineConfigItem = ConfigItem;
+    type MachineDefaults=MachineConfigItem[];
+
+    type ConfigListEntry={
+        filename: string;
+        timestamp: string;
+        comment: string;
+        cell_line: string;
+        plate_type: Wellplate;
+    };
+    type ConfigListResponse={configs:ConfigListEntry[]};
+
+    type StoreConfigRequest={
+        filename:string;
+        config_file:AcquisitionConfig;
+        comment:string|null;
+    };
+    type StoreConfigResponse=BasicSuccessResponse;
+
     type AcquisitionStartRequest={
         config_file:AcquisitionConfig;
     };
@@ -214,6 +253,7 @@ declare global {
         acquisition_id:string;
     };
     type AcquisitionStopResponse={};
+    type AcquisitionStopError=InternalErrorModel;
 
     type AdapterPosition={
         x_pos_mm:float;
@@ -278,6 +318,35 @@ declare global {
     };
     type AcquisitionStatusResponse=AcquisitionStatusOut;
     type AcquisitionStartError=InternalErrorModel;
+
+    type LaserAutofocusCalibrateRequest={};
+    type LaserAutofocusCalibrateResponse={
+        calibration_data: {
+            um_per_px: float,
+            x_reference: float,
+            calibration_position: {
+                x_pos_mm: number,
+                y_pos_mm: number,
+                z_pos_mm: number
+            }
+        }
+    };
+    type LaserAutofocusMoveToTargetOffsetRequest={
+        target_offset_um:float,
+        config_file:AcquisitionConfig,
+    };
+    type LaserAutofocusMoveToTargetOffsetResponse={
+        num_compensating_moves:int,
+        uncompensated_offset_mm:float,
+        reached_threshold:boolean,
+    };
+    type LaserAutofocusMeasureDisplacementRequest={
+        config_file:AcquisitionConfig,
+        override_num_images?:int,
+    };
+    type LaserAutofocusMeasureDisplacementResponse={
+        displacement_um:float,
+    };
 }
 
 // this line ensures that the 'declare global' are visible by the LSP in other .js files
