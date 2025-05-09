@@ -90,10 +90,14 @@ document.addEventListener('alpine:init', () => {
             const configStoreEntry={
                 // structuredClone does not work on this
                 config_file:JSON.parse(JSON.stringify(this.microscope_config)),
+                
                 filename:this.configStoreFilename,
                 comment:this.microscope_config.comment
             };
             await storeConfig(configStoreEntry);
+
+            // refresh list after store (to confirm successful store)
+            await this.refreshConfigList();
         },
 
         // keep track of global initialization state
