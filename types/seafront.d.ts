@@ -85,7 +85,7 @@ declare global {
         grid: AcquisitionWellSiteConfiguration;
         autofocus_enabled: boolean;
         comment: string | null;
-        machine_config: any[];
+        machine_config: MachineConfigItem[];
         wellplate_type: Wellplate;
         timestamp: string | null;
         channels: AcquisitionChannelConfig[];
@@ -134,7 +134,7 @@ declare global {
 
 declare global {
 
-    type CheckMapSquidRequestFn<T,E>=(v:Response)=>Promise<T>;
+    type CheckMapSquidRequestFn<T, E extends object>=(v:Response)=>Promise<T>;
 
     type Wellplate = {
         Manufacturer: string;
@@ -163,6 +163,12 @@ declare global {
 
     type BasicSuccessResponse = {};
 
+    type MoveToRequest={
+        x_mm?:number;
+        y_mm?:number;
+        z_mm?:number;
+    };
+    type MoveToResult=BasicSuccessResponse;
     type MoveByRequest = {
         axis:"x"|"y"|"z";
         distance_mm:float;
@@ -216,14 +222,40 @@ declare global {
         /** can be anything, e.g. (actual example): object {"magnification":4} */
         info: any|null;
     };
-    type ConfigItem = {
-        name: string;
-        handle: string;
-        value_kind: "int"|"float"|"text"|"option"|"action";
-        value: int|float|string;
-        frozen: boolean;
-        options: (ConfigItemOption[])|null;
-    };
+    type ConfigItem = (
+        {
+            name: string;
+            handle: string;
+            value_kind: "int";
+            value: int;
+            frozen: boolean;
+        }|{
+            name: string;
+            handle: string;
+            value_kind: "float";
+            value: float;
+            frozen: boolean;
+        }|{
+            name: string;
+            handle: string;
+            value_kind: "text";
+            value: string;
+            frozen: boolean;
+        }|{
+            name: string;
+            handle: string;
+            value_kind: "option";
+            value: string;
+            frozen: boolean;
+            options: (ConfigItemOption[])|null;
+        }|{
+            name: string;
+            handle: string;
+            value_kind: "action";
+            value: string;
+            frozen: boolean;
+        }
+    );
     type MachineConfigItem = ConfigItem;
     type MachineDefaults=MachineConfigItem[];
 
@@ -242,6 +274,13 @@ declare global {
         comment:string|null;
     };
     type StoreConfigResponse=BasicSuccessResponse;
+    type LoadConfigRequest={
+        /** filename of the target config file */
+        config_file:string;
+    };
+    type LoadConfigResponse={
+        file:AcquisitionConfig;
+    };
 
     type AcquisitionStartRequest={
         config_file:AcquisitionConfig;

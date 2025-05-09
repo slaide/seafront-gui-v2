@@ -14,7 +14,7 @@ Object.assign(window, { matWellColor, matSiteColor, matFovColor });
 import { registerNumberInput } from "numberinput";
 Object.assign(window, { registerNumberInput });
 
-import { storeConfig, getConfigList, getMachineDefaults, getHardwareCapabilities, getPlateTypes, defaultConfig } from "microscope_setup";
+import { loadConfig, storeConfig, getConfigList, getMachineDefaults, getHardwareCapabilities, getPlateTypes, defaultConfig } from "microscope_setup";
 
 import { ChannelImageView } from "channelview";
 
@@ -45,9 +45,10 @@ window.addEventListener("load", () => {
 });
 
 /**
- * @template T, E
+ * @template T
+ * @template {object} E
  * @type {CheckMapSquidRequestFn<T,E>}
- * */
+ */
 async function checkMapSquidRequest(v){
     if(!v.ok){
         if(v.status==500){
@@ -84,13 +85,14 @@ document.addEventListener('alpine:init', () => {
             this.protocol_list=(await getConfigList()).configs;
         },
         storeConfig,
+        loadConfig,
         /** used in GUI to configure filename when storing current config on server */
         configStoreFilename:"",
         async storeCurrentConfig(){
             const configStoreEntry={
                 // structuredClone does not work on this
-                config_file:JSON.parse(JSON.stringify(this.microscope_config)),
-                
+                config_file:this.microscope_config_copy,
+
                 filename:this.configStoreFilename,
                 comment:this.microscope_config.comment
             };
@@ -105,6 +107,47 @@ document.addEventListener('alpine:init', () => {
         async manualInit(){
             await this.initSelf();
             this.initDone=true;
+
+            await this.refreshConfigList();
+        },
+
+        /**
+         * 
+         * @param {string} name 
+         * @returns {MachineConfigItem|null}
+         */
+        getMachineConfigItem(name){
+            for(const configitem of this.microscope_config.machine_config){
+                if(configitem.handle==name){
+                    return configitem;
+                }
+            }
+            return null;
+        },
+
+        /**
+         * 
+         * @param {MachineConfigItem} config 
+         * @returns {Promise<BasicSuccessResponse>}
+         */
+        async runMachineConfigAction(config){
+            if(config.value_kind!="action"){
+                throw `cannot runMachineConfigAction on non-action config ${config.handle} (kind=${config.value_kind})`;
+            }
+
+            const action_url=`http://localhost:5002${config.value}`;
+            console.log(`executing action: '${action_url}'`)
+            return fetch(action_url, {
+                method: "POST",
+                body: JSON.stringify({}),
+                headers: [
+                    ["Content-Type", "application/json"]
+                ]
+            }).then(v=>{
+                /** @ts-ignore @type {CheckMapSquidRequestFn<BasicSuccessResponse,InternalErrorModel>} */
+                const check=checkMapSquidRequest;
+                return check(v);
+            });
         },
 
         // keep track of number of open websockets (to limit frontend load)
@@ -243,6 +286,11 @@ document.addEventListener('alpine:init', () => {
         get microscope_config(){
             if(!this._microscope_config){ throw `bug in microscope_config`; }
             return this._microscope_config;
+        },
+
+        /** a copy of this is required often, but non-trivial to construct, so the utility is provided here. */
+        get microscope_config_copy(){
+            return JSON.parse(JSON.stringify(this.microscope_config));
         },
 
         /** used to filter the machine config list */
@@ -408,7 +456,7 @@ document.addEventListener('alpine:init', () => {
         async acquisition_start(body){
             // make deep copy first
             /** @type {AcquisitionStartRequest} */
-            const body_copy=JSON.parse(JSON.stringify(body));
+            const body_copy=structuredClone(body);
 
             // mutate copy (to fix some errors we introduce in the interface)
             // 1) remove wells that are unselected or invalid
@@ -492,6 +540,25 @@ document.addEventListener('alpine:init', () => {
                     ]
                 }).then(v=>{
                     /** @ts-ignore @type {CheckMapSquidRequestFn<MoveByResult,InternalErrorModel>} */
+                    const check=checkMapSquidRequest;
+                    return check(v);
+                });
+            },
+
+            /**
+             * rpc to /api/action/move_to
+             * @param {MoveToRequest} body
+             * @returns {Promise<MoveToResult>}
+             */
+            moveTo(body) {
+                return fetch("http://localhost:5002/api/action/move_to", {
+                    method: "POST",
+                    body: JSON.stringify(body),
+                    headers: [
+                        ["Content-Type", "application/json"]
+                    ]
+                }).then(v=>{
+                    /** @ts-ignore @type {CheckMapSquidRequestFn<MoveToResult,InternalErrorModel>} */
                     const check=checkMapSquidRequest;
                     return check(v);
                 });
@@ -663,10 +730,29 @@ document.addEventListener('alpine:init', () => {
                     const check=checkMapSquidRequest;
                     return check(v);
                 }).then(v => {
-                    console.log(v);
                     return v;
                 });
             },
+        },
+
+        /** @type {number} */
+        laserAutofocusTargetOffsetUM:0,
+        async button_laserAutofocusMoveToTargetOffset(){
+            const res=await this.Actions.laserAutofocusMoveToTargetOffset({
+                config_file:this.microscope_config_copy,
+                target_offset_um:this.laserAutofocusTargetOffsetUM,
+            });
+            return res;
+        },
+        /**
+         * offset and position where it was measured
+         * @type {LaserAutofocusMeasureDisplacementResponse|null}
+         */
+        laserAutofocusMeasuredOffset:null,
+        async button_laserAutofocusMeasureOffset(){
+            this.laserAutofocusMeasuredOffset=await this.Actions.laserAutofocusMeasureDisplacement({
+                config_file:this.microscope_config_copy,
+            });
         },
 
         /**
@@ -762,25 +848,168 @@ document.addEventListener('alpine:init', () => {
             live_acquisition_framerate: 5.0,
         },
 
+        get laserAutofocusIsCalibrated(){
+            const is_calibrated=(this.getMachineConfigItem("laser_autofocus_is_calibrated")?.value??'no')=='yes';
+            return is_calibrated;
+        },
+        get laserAutofocusReferenceText(){
+            const is_calibrated=this.laserAutofocusIsCalibrated;
+            const laser_autofocus_calibration_refzmm=this.getMachineConfigItem("laser_autofocus_calibration_refzmm");
+            if(
+                !is_calibrated || !laser_autofocus_calibration_refzmm
+            ){
+                return '(none set)';
+            }
+
+            if(laser_autofocus_calibration_refzmm.value_kind!="float"){
+                throw `machine config laser_autofocus_calibration_refzmm has unexpected value kind ${laser_autofocus_calibration_refzmm.value_kind}`;
+            }
+
+            const reference_z_mm=laser_autofocus_calibration_refzmm.value;
+            return `set at z = ${reference_z_mm.toFixed(3)}`;
+        },
         /**
-         * position where reference was set
-         * @type {{pos:AdapterPosition}|null}
+         * this calibrates the system and sets the current z as reference
+         * -> store for later retrieval
          */
-        laserAutofocusReference:null,
-        /**
-         * offset and position where it was measured
-         * @type {{offset_um:number,pos:AdapterPosition}|null}
-         */
-        laserAutofocusMeasuredOffset:null,
-        /**
-         * 
-         * @param {MouseEvent} ev 
-         */
-        async buttons_calibrateLaserAutofocusHere(ev){
-            // this calibrates the system and sets the current z as reference
-            // -> store for later retrieval
+        async buttons_calibrateLaserAutofocusHere(){
             const calibration_data=await this.Actions.laserAutofocusCalibrate({});
             console.log(`calibrated laser autofocus system`,calibration_data);
+
+            const calibration_refzmm=this.getMachineConfigItem("laser_autofocus_calibration_refzmm");
+            if(!calibration_refzmm)throw`machine config item calibration_refzmm not found during laser autofocus calibration`;
+            if(calibration_refzmm.value_kind!="float")throw`machine config item calibration_refzmm has unexpected type ${calibration_refzmm.value_kind}`;
+            calibration_refzmm.value=calibration_data.calibration_data.calibration_position.z_pos_mm;
+
+            const calibration_umpx=this.getMachineConfigItem("laser_autofocus_calibration_umpx");
+            if(!calibration_umpx)throw`machine config item calibration_umpx not found during laser autofocus calibration`;
+            if(calibration_umpx.value_kind!="float")throw`machine config item calibration_umpx has unexpected type ${calibration_umpx.value_kind}`;
+            calibration_umpx.value=calibration_data.calibration_data.um_per_px;
+
+            const calibration_x=this.getMachineConfigItem("laser_autofocus_calibration_x");
+            if(!calibration_x)throw`machine config item calibration_x not found during laser autofocus calibration`;
+            if(calibration_x.value_kind!="float")throw`machine config item calibration_x has unexpected type ${calibration_x.value_kind}`;
+            calibration_x.value=calibration_data.calibration_data.x_reference;
+
+            const is_calibrated=this.getMachineConfigItem("laser_autofocus_is_calibrated");
+            if(!is_calibrated)throw`machine config item is_calibrated not found during laser autofocus calibration`;
+            if(is_calibrated.value_kind!="option")throw`machine config item is_calibrated has unexpected type ${is_calibrated.value_kind}`;
+            is_calibrated.value="yes";
+        },
+
+        get laserAutofocusOffsetText(){
+            const noresult='(not measured)';
+
+            const is_calibrated=this.laserAutofocusIsCalibrated;
+            if(!is_calibrated){
+                return noresult;
+            }
+            if(!this.laserAutofocusMeasuredOffset){
+                return noresult;
+            }
+            return this.laserAutofocusMeasuredOffset.displacement_um;
+        },
+
+        laserAutofocusDebug_numz:7,
+        laserAutofocusDebug_totalz_um:400,
+        /** @type {{realz_um:number,measuredz_um:number}[]} */
+        laserAutofocusDebug_measurements:[],
+        async buttons_laserAutofocusDebugMeasurement(){
+            this.laserAutofocusDebug_measurements.length=0;
+            if(!this.laserAutofocusIsCalibrated)throw`in buttons_laserAutofocusDebugMeasurement: laser autofocus is not calibrated`;
+            
+            if(this.laserAutofocusDebug_numz<3)throw`in buttons_laserAutofocusDebugMeasurement: numz (=${this.laserAutofocusDebug_numz}) < 3`;
+            const stepDelta_mm=this.laserAutofocusDebug_totalz_um*1e-3/(this.laserAutofocusDebug_numz-1)
+
+            const halfz_mm=this.laserAutofocusDebug_totalz_um*1e-3/2;
+
+            // 1) approach ref z
+            /** @ts-ignore @type {number} */
+            const refz_mm=this.getMachineConfigItem("laser_autofocus_calibration_refzmm").value;
+            await this.Actions.moveTo({z_mm:refz_mm});
+
+            // 2) move in steps, measure at each
+            for(let i=0;i<this.laserAutofocusDebug_numz;i++){
+                const current_real_offset_mm=-halfz_mm+i*stepDelta_mm;
+
+                await this.Actions.moveTo({z_mm:refz_mm+current_real_offset_mm});
+                try{
+                    const res=await this.Actions.laserAutofocusMeasureDisplacement({
+                        config_file:this.microscope_config_copy,
+                    });
+                    this.laserAutofocusDebug_measurements.push({
+                        realz_um:current_real_offset_mm*1e3,
+                        measuredz_um:res.displacement_um,
+                    })
+                }catch(e){}
+            }
+            // 3) restore z (by moving to ref)
+            await this.Actions.moveTo({z_mm:refz_mm});
+
+            // 4) flush results
+            // nop
+        },
+
+        /**
+         * 
+         * @returns {{data:PlotlyTrace[],layout:PlotlyLayout}}
+         */
+        _getLaserAutofocusDebugMeasurementPlotData(){
+            /** @type {{data:PlotlyTrace[],layout:PlotlyLayout}} */
+            const ret={
+                data:[
+                    // measured
+                    {
+                        x:this.laserAutofocusDebug_measurements.map(m=>m.realz_um),
+                        y:this.laserAutofocusDebug_measurements.map(m=>m.measuredz_um),
+                        name:"measured",
+                        line:{
+                            color:"orange",
+                        }
+                    },
+                    // real
+                    {
+                        x:this.laserAutofocusDebug_measurements.map(m=>m.realz_um),
+                        y:this.laserAutofocusDebug_measurements.map(m=>m.realz_um),
+                        name:"real",
+                        line:{
+                            color:"green",
+                        }
+                    },
+                    // error
+                    {
+                        x:this.laserAutofocusDebug_measurements.map(m=>m.realz_um),
+                        y:this.laserAutofocusDebug_measurements.map(m=>m.measuredz_um-m.realz_um),
+                        name:"error",
+                        line:{
+                            color:"red",
+                            dash:"dash",
+                        }
+                    },
+                ],
+                layout:{
+                    xaxis:{
+                        range:[-10-this.laserAutofocusDebug_totalz_um/2,10+this.laserAutofocusDebug_totalz_um/2]
+                    }
+                }
+            };
+            return ret;
+        },
+        /**
+         * 
+         * @param {HTMLElement} el 
+         */
+        initLaserAutofocusDebugMeasurementDisplay(el){
+            const {data,layout}=this._getLaserAutofocusDebugMeasurementPlotData();
+            Plotly.newPlot(el,data,layout);
+        },
+        /**
+         * 
+         * @param {HTMLElement} el 
+         */
+        updateLaserAutofocusDebugMeasurementDisplay(el){
+            const {data,layout}=this._getLaserAutofocusDebugMeasurementPlotData();
+            Plotly.react(el,data,layout);
         },
 
         /**

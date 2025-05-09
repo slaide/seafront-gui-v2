@@ -13,7 +13,7 @@ export async function getHardwareCapabilities() {
     }).then(v=>{
         /** @ts-ignore @type {CheckMapSquidRequestFn<HardwareCapabilities,InternalErrorModel>} */
         const check=checkMapSquidRequest;
-        return check(v)
+        return check(v);
     });
 
     return plateinfo;
@@ -31,8 +31,9 @@ export async function getMachineDefaults(){
     }).then(v=>{
         /** @ts-ignore @type {CheckMapSquidRequestFn<MachineDefaults,InternalErrorModel>} */
         const check=checkMapSquidRequest;
-        return check(v)
+        return check(v);
     });
+    console.log("got machine defaults",structuredClone(machinedefaults));
 
     return machinedefaults;
 }
@@ -52,7 +53,6 @@ export async function getConfigList(){
         const check=checkMapSquidRequest;
         return check(v)
     });
-    console.log("configlistresponse",configlist)
 
     return configlist;
 }
@@ -74,7 +74,25 @@ export async function storeConfig(body){
         return check(v);
     });
 
-    console.log(`got response`,response);
+    return response;
+}
+
+/**
+ * @param {LoadConfigRequest} body
+ * @returns {Promise<LoadConfigResponse>}
+ */
+export async function loadConfig(body){
+    const response=await fetch("http://localhost:5002/api/acquisition/config_fetch",{
+        method:"POST",
+        body:JSON.stringify(body),
+        headers: [
+            ["Content-Type", "application/json"]
+        ]
+    }).then(v=>{
+        /** @ts-ignore @type {CheckMapSquidRequestFn<LoadConfigResponse,InternalErrorModel>} */
+        const check=checkMapSquidRequest;
+        return check(v);
+    });
 
     return response;
 }

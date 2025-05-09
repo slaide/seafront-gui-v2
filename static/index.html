@@ -16,7 +16,8 @@
 			}
 		}
 	</style>
-
+	<!-- importing plotly as module fails, so we do this instead -->
+	<script src="https://cdn.jsdelivr.net/npm/plotly.js@3.0/dist/plotly.min.js"></script>
 	<script type="importmap">
 		{
 			"imports": {
@@ -26,8 +27,6 @@
 				"three/addons/capabilities/WebGL": "https://cdn.jsdelivr.net/npm/three@0.176/examples/jsm/capabilities/WebGL.min.js",
 				"three/addons/loaders/FontLoader": "https://cdn.jsdelivr.net/npm/three@0.176/examples/jsm/loaders/FontLoader.min.js",
 				"three/addons/utils/BufferGeometryUtils": "https://cdn.jsdelivr.net/npm/three@0.176/examples/jsm/utils/BufferGeometryUtils.min.js",
-
-				"plotly": "https://esm.run/plotly.js@3.0",
 
 				"platenavigator":   "/src/platenavigator.js",
 				"numberinput":      "/src/numberinput.js",
@@ -130,7 +129,8 @@
 						<style>
 							#grid-container {
 								display: grid;
-								grid-template-columns: 1fr 1fr 1fr;
+								--num-cols:2;
+								grid-template-columns: repeat(var(--num-cols), 1fr);
 
 								.channel-box-image {
 									aspect-ratio: 1;
@@ -157,7 +157,7 @@
 							<!--div x-html="cached_channel_image.get('fluo405').info.timestamp"></div-->
 							<template x-for="channel in microscope_config.channels.filter(c=>c.enabled)">
 								<div class="channel-box" x-bind:channelhandle="channel.handle">
-									<div x-text="channel.name"></div>
+									<div x-bind:id="`channel-display-${channel.handle}`" x-text="channel.name"></div>
 									<div x-effect="updateChannelCache($el)" class="channel-box-image"
 										style="border:1em white;"></div>
 								</div>
@@ -199,7 +199,7 @@
 											<textarea rows=3 wrap=soft x-model="config.value" x-effect="disableElement($el,()=>config.frozen)"></textarea>
 										</template>
 										<template x-if="config.value_kind=='action'">
-											<button x-text="config.value"></button>
+											<button x-text="config.value" x-on:click="await runMachineConfigAction(config)"></button>
 										</template>
 										<template x-if="config.value_kind=='option'">
 											<select x-model="config.value"
@@ -231,6 +231,7 @@
 						<div>
 							<table>
 								<tr>
+									<th></th>
 									<th>filename</th>
 									<th>timestamp</th>
 									<th>comment</th>
@@ -239,6 +240,9 @@
 								</tr>
 								<template x-for="protocol in protocol_list">
 									<tr>
+										<td>
+											<button x-on:click="Object.assign(microscope_config,(await loadConfig({config_file:protocol.filename})).file)">Load</button>
+										</td>
 										<td x-text="protocol.filename"></td>
 										<td x-text="protocol.timestamp"></td>
 										<td x-text="protocol.comment"></td>
@@ -247,6 +251,17 @@
 									</tr>
 								</template>
 							</table>
+						</div>
+					</div>
+					<div tabname="LAF debugs">
+						<div>
+							<label>num steps</label><input type="number" x-model="laserAutofocusDebug_numz" step="2" min="3" max="99">
+							<label>delta z [um]</label><input type="number" x-model="laserAutofocusDebug_totalz_um" step="10" min="20" max="500">
+							<button x-on:click="buttons_laserAutofocusDebugMeasurement">measure</button>
+
+							<div
+								x-effect="updateLaserAutofocusDebugMeasurementDisplay($el)"
+								x-init="initLaserAutofocusDebugMeasurementDisplay($el)"></div>
 						</div>
 					</div>
 				</div>
@@ -511,6 +526,7 @@
 									<label x-bind:for="`${channel.handle}-enabled`" x-text="channel.name"
 										x-effect="disableElement($el,()=>!channel.enabled)" ></label>
 									<button x-on:click="Actions.snapChannel({channel})"
+										x-on:mouseenter="document.getElementById(`channel-display-${channel.handle}`).scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' });"
 										x-effect="disableElement($el,()=>!channel.enabled)" >snap</button>
 
 									<input type="number" min=0.1 step=0.1 max=936 placeholder="5"
@@ -615,16 +631,20 @@
 								}
 							</style>
 							<label>Reference</label>
-							<span x-text="laserAutofocusReference ?? '(none set)'"></span>
+							<span x-text="laserAutofocusReferenceText"></span>
 							<button
 								x-init="enabletooltip($el)"
 								x-bind:tooltip="`calibrate laser autofocus here, i.e. retain this level of focus on the cells.`"
 								x-on:click="buttons_calibrateLaserAutofocusHere"
 							>Set here</button>
 
-							<label>Offset from reference</label>
-							<span x-text="laserAutofocusMeasuredOffset?.offset_um ?? '(not measured)'"></span>
-							<button>Measure</button>
+							<label>Offset from reference [um]</label>
+							<span x-text="laserAutofocusOffsetText"></span>
+							<button x-on:click="button_laserAutofocusMeasureOffset">Measure</button>
+
+							<label>Target Offset [um]</label>
+							<input type="number" x-model="laserAutofocusTargetOffsetUM">
+							<button x-on:click="button_laserAutofocusMoveToTargetOffset">Move</button>
 						</div>
 					</div>
 
