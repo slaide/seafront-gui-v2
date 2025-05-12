@@ -24,6 +24,8 @@ Object.assign(window, { enabletooltip });
 import { initTabs } from "tabs";
 Object.assign(window, { initTabs });
 
+import { makeHistogram,histogramLayout,histogramConfig } from "histogram";
+
 /**
  * add 'disabled' attribute to an element if condition is true, otherwise removes the attribute.
  * @param {HTMLElement} el
@@ -103,16 +105,22 @@ document.addEventListener('alpine:init', () => {
         storeConfig,
         loadConfig,
         /** used in GUI to configure filename when storing current config on server */
-        configStoreFilename:"",
+        configStore_filename:"",
+        configStore_overwrite_on_conflict:false,
         async storeCurrentConfig(){
             const configStoreEntry={
                 // structuredClone does not work on this
                 config_file:this.microscope_config_copy,
 
-                filename:this.configStoreFilename,
-                comment:this.microscope_config.comment
+                filename:this.configStore_filename,
+                comment:this.microscope_config.comment,
+                overwrite_on_conflict:this.configStore_overwrite_on_conflict,
             };
             await storeConfig(configStoreEntry);
+
+            // ensure no config is overwritten by accident afterwards
+            this.configStore_overwrite_on_conflict=false;
+            this.configStore_filename="";
 
             // refresh list after store (to confirm successful store)
             await this.refreshConfigList();
@@ -181,45 +189,45 @@ document.addEventListener('alpine:init', () => {
 
             const channel_handle=channel_info.channel.handle;
 
-                    /**@type {Promise<CachedChannelImage>}*/
-                    const finished = new Promise((resolve, reject) => {
-                        // fetch image metadata
+            /**@type {Promise<CachedChannelImage>}*/
+            const finished = new Promise((resolve, reject) => {
+                // fetch image metadata
                 cws.binaryType = "blob";
                 cws.onopen = ev => cws.send(channel_handle);
-                        cws.onmessage = meta_ev => {
-                            /**
-                             * @type {{
-                             * height: number,
-                             * width: number,
-                             * bit_depth: number,
-                             * camera_bit_depth: number
-                             * }}
-                             */
+                cws.onmessage = meta_ev => {
+                    /**
+                     * @type {{
+                     * height: number,
+                     * width: number,
+                     * bit_depth: number,
+                     * camera_bit_depth: number
+                     * }}
+                     */
                     const metadata = JSON.parse(meta_ev.data);
 
-                            // fetch image data (into arraybuffer)
+                    // fetch image data (into arraybuffer)
                     cws.binaryType = "arraybuffer";
-                            cws.onmessage = img_ev => {
-                                /** @type {ArrayBuffer} */
+                    cws.onmessage = img_ev => {
+                        /** @type {ArrayBuffer} */
                         const img_data = img_ev.data;
 
-                                /** @type {CachedChannelImage} */
-                                const img = Object.assign(metadata, {
-                                    // store image data
-                                    data: img_data,
-                                    // update current channel info (latest image, incl. metadata)
-                                    info: channel_info,
+                        /** @type {CachedChannelImage} */
+                        const img = Object.assign(metadata, {
+                            // store image data
+                            data: img_data,
+                            // update current channel info (latest image, incl. metadata)
+                            info: channel_info,
                         });
 
-                                // close websocket once data is received
+                        // close websocket once data is received
                         cws.close();
                         this._numOpenWebsockets--;
 
                         resolve(img);
-                            }
-                            // send downsample factor
+                    }
+                    // send downsample factor
                     cws.send(`${downsample_factor}`);
-                        }
+                }
                 cws.onerror = ev => reject(ev);
             });
             const data = await finished;
@@ -243,6 +251,9 @@ document.addEventListener('alpine:init', () => {
 
             if (this._numOpenWebsockets < 1 && this.state.latest_imgs != null) {
                 for (const [channel_handle, channel_info] of Object.entries(this.state.latest_imgs)) {
+                    // ignore laser autofocus image (which is not actually useful for anything other than debugging, for which it has its own button)
+                    if(channel_handle=="laser_autofocus")continue;
+
                     const cached_image = this.cached_channel_image.get(channel_handle)
 
                     const image_cache_outdated = /*no image in cache*/ (cached_image == null)
@@ -439,6 +450,59 @@ document.addEventListener('alpine:init', () => {
 
         /** @type {Map<string,CachedChannelImage>} */
         cached_channel_image: new Map(),
+
+
+        makeHistogram,
+        /**
+         * 
+         * @param {HTMLElement} el 
+         */
+        updateHistogram(el){
+            /** @type {PlotlyTrace[]} */
+            const data=[];
+            const xvalues=new Uint16Array(257).map((v,i)=>i);
+
+            for(const [key,value] of Array.from(this.cached_channel_image.entries()).toSorted((l,r)=>{
+                return (l[0]>r[0])?1:-1;
+            })){
+                // key is handle, i.e. key===value.info.channel.handle (which is not terribly useful for displaying)
+                const name=value.info.channel.name;
+
+                const y=new Float32Array(xvalues.length);
+
+                const rawdata=(()=>{
+                    switch(value.bit_depth){
+                        case 8: return new Uint8Array(value.data);
+                        case 16: return new Uint16Array(value.data).map(v=>v>>8);
+                        default:throw``;
+                    }
+                })();
+                for(const val of rawdata){
+                    y[val]++;
+                }
+                data.push({
+                    name,
+                    x:xvalues,
+                    y
+                });
+            }
+            Plotly.react(el,data,histogramLayout,histogramConfig);
+        },
+
+        /**
+         * scroll target channel view panel into view
+         * @param {string} handle 
+         */
+        channel_makeVisible(handle){
+            const el=document.getElementById(`channel-display-${handle}`);
+            // element may not be visible, e.g. because the tab is not currently visible
+            if(!el)return;
+            el.scrollIntoView({
+                behavior: 'smooth',
+                block: 'start',
+                inline: 'nearest',
+            });
+        },
 
         /**
          * set status of all wells in selection to inverse of current status of first selected element
@@ -1045,10 +1109,10 @@ document.addEventListener('alpine:init', () => {
 
         /**
          * 
-         * @returns {{data:PlotlyTrace[],layout:PlotlyLayout}}
+         * @returns {{data:PlotlyTrace[],layout:PlotlyLayout,config:PlotlyConfig}}
          */
         _getLaserAutofocusDebugMeasurementPlotData(){
-            /** @type {{data:PlotlyTrace[],layout:PlotlyLayout}} */
+            /** @type {{data:PlotlyTrace[],layout:PlotlyLayout,config:PlotlyConfig}} */
             const ret={
                 data:[
                     // measured
@@ -1081,9 +1145,36 @@ document.addEventListener('alpine:init', () => {
                     },
                 ],
                 layout:{
+                    autosize: true,
+                    showlegend: true,
                     xaxis:{
-                        range:[-10-this.laserAutofocusDebug_totalz_um/2,10+this.laserAutofocusDebug_totalz_um/2]
-                    }
+                        title:{text:"z offset from reference [um]"},
+                        range:[
+                            // z range, with some margin on either side
+                            -10 - this.laserAutofocusDebug_totalz_um / 2,
+                             10 + this.laserAutofocusDebug_totalz_um / 2
+                        ]
+                    },
+                    yaxis:{
+                        title:{text:"measured offset [um]"}
+                    },
+                    margin: {
+                        t: 20, // top margin for pan/zoom buttons
+                        l: 60, // reduced y axis margin
+                        r: 20, // reduced x axis margin
+                        b: 40, // bottom margin for x-axis title
+                    },
+                },
+                config:{
+                    responsive: true,
+                    modeBarButtonsToRemove: [
+                        'sendDataToCloud',
+                        "zoom2d", "pan2d", "select2d", "lasso2d",
+                        "zoomIn2d", "zoomOut2d",
+                        "autoScale2d", "resetScale2d"
+                    ],
+                    showLink: false,
+                    displaylogo: false,
                 }
             };
             return ret;
@@ -1093,16 +1184,21 @@ document.addEventListener('alpine:init', () => {
          * @param {HTMLElement} el 
          */
         initLaserAutofocusDebugMeasurementDisplay(el){
-            const {data,layout}=this._getLaserAutofocusDebugMeasurementPlotData();
-            Plotly.newPlot(el,data,layout);
+            const {data,layout,config}=this._getLaserAutofocusDebugMeasurementPlotData();
+            Plotly.newPlot(el,data,layout,config);
+
+            new ResizeObserver(function () {
+                // @ts-ignore
+                Plotly.relayout(el, { autosize: true });
+            }).observe(el)
         },
         /**
          * 
          * @param {HTMLElement} el 
          */
         updateLaserAutofocusDebugMeasurementDisplay(el){
-            const {data,layout}=this._getLaserAutofocusDebugMeasurementPlotData();
-            Plotly.react(el,data,layout);
+            const {data,layout,config}=this._getLaserAutofocusDebugMeasurementPlotData();
+            Plotly.react(el,data,layout,config);
         },
 
         /**

@@ -33,7 +33,8 @@
 				"microscope_setup": "/src/microscope_setup.js",
 				"channelview":      "/src/channelview.js",
 				"tooltip":          "/src/tooltip.js",
-				"tabs":             "/src/tabs.js"
+				"tabs":             "/src/tabs.js",
+				"histogram":        "/src/histogram.js"
 			}
 		}
 	</script>
@@ -194,7 +195,7 @@
 										</template>
 										<template x-if="config.value_kind=='float'">
 											<input type="number" step="0.01" x-model="config.value" is="number-input"
-											x-init="registerNumberInput($el)" x-effect="disableElement($el,()=>config.frozen)">
+												x-init="registerNumberInput($el)" x-effect="disableElement($el,()=>config.frozen)">
 										</template>
 										<template x-if="config.value_kind=='text'">
 											<textarea rows=3 wrap=soft x-model="config.value" x-effect="disableElement($el,()=>config.frozen)"></textarea>
@@ -226,7 +227,9 @@
 						</div>
 						<div>
 							<label>Filename:</label>
-							<input x-model="configStoreFilename" type="text" placeholder="filename">
+							<input x-model="configStore_filename" type="text" placeholder="filename">
+							<label>overwrite?</label>
+							<input type="checkbox" x-model="configStore_overwrite_on_conflict">
 							<button x-on:click="storeCurrentConfig">Store</button>
 						</div>
 						<div>
@@ -261,6 +264,7 @@
 							<button x-on:click="buttons_laserAutofocusDebugMeasurement">measure</button>
 
 							<div
+								style="width:100%;"
 								x-effect="updateLaserAutofocusDebugMeasurementDisplay($el)"
 								x-init="initLaserAutofocusDebugMeasurementDisplay($el)">
 							</div>
@@ -533,7 +537,7 @@
 									<label x-bind:for="`${channel.handle}-enabled`" x-text="channel.name"
 										x-effect="disableElement($el,()=>!channel.enabled)" ></label>
 									<button x-on:click="Actions.snapChannel({channel})"
-										x-on:mouseenter="document.getElementById(`channel-display-${channel.handle}`).scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' });"
+										x-on:mouseenter="channel_makeVisible(channel.handle);"
 										x-effect="disableElement($el,()=>!channel.enabled)" >snap</button>
 
 									<input type="number" min=0.1 step=0.1 max=936 placeholder="5"
@@ -659,6 +663,10 @@
 							<label>Target Offset [um]</label>
 							<input type="number" x-model="laserAutofocusTargetOffsetUM">
 							<button x-on:click="button_laserAutofocusMoveToTargetOffset">Move</button>
+						</div>
+
+						<div>
+							<div style="width: 100%;" x-init="makeHistogram($el)" x-effect="updateHistogram($el)"></div>
 						</div>
 					</div>
 

@@ -267,6 +267,7 @@ declare global {
     type StoreConfigRequest={
         filename:string;
         config_file:AcquisitionConfig;
+        overwrite_on_conflict:boolean|null;
         comment:string|null;
     };
     type StoreConfigResponse=BasicSuccessResponse;

@@ -106,26 +106,29 @@ declare global{
         size?: number;
         color?: PlotlyColor;
     };
+    type AnchorPosition='center'|'left'|'bottom';
     type PlotlyLayout={
         barmode?: 'group'|"stack";
         scattermode?: 'group';
         barcornerradius?: number;
         bargap?: number;
         bargroupgap?: number;
-        title?: {
-            text:string;
-        };
+        title?: Label;
         width?:number;
         height?:number;
         autosize?:boolean;
         showlegend?:boolean;
         legend?: {
-            y: number;
-            yref: 'paper';
-            font: PlotlyFontConfig;
+            y?: number;
+            x?: number;
+            yref?: 'paper';
+            font?: PlotlyFontConfig;
             traceorder?: 'reversed';
             bgcolor?:PlotlyColor;
             bordercolor?:PlotlyColor;
+            orientation?:"h"|"v";
+            xanchor?:AnchorPosition;
+            yanchor?:AnchorPosition;
         };
 
         yaxis?:PlotlyAxis;
@@ -142,15 +145,15 @@ declare global{
         paper_bgcolor?:string;
         font?:PlotlyFontConfig;
         annotations?:{
-            xref: 'paper';
-            yref: 'paper';
-            x: number;
-            y: number;
-            xanchor: 'left';
-            yanchor: 'bottom';
-            text: PlotlyText;
-            font: PlotlyFontConfig;
-            showarrow: boolean;
+            xref?: 'paper';
+            yref?: 'paper';
+            x?: number;
+            y?: number;
+            xanchor?: AnchorPosition;
+            yanchor?: AnchorPosition;
+            text?: PlotlyText;
+            font?: PlotlyFontConfig;
+            showarrow?: boolean;
         }[];
         /** https://plotly.com/javascript/subplots/ */
         grid?: {
@@ -188,7 +191,7 @@ declare global{
     const Icons:PlotlyIconPresetPalette;
     
     type PlotlyConfig={
-        showEditInChartStudio: boolean;
+        showEditInChartStudio?: boolean;
         responsive?:boolean;
         modeBarButtonsToRemove?:PlotlyModeBarButton[];
         modeBarButtonsToAdd?: PlotlyModeBarButton[];
@@ -213,8 +216,12 @@ declare global{
         layout:PlotlyLayout;
     });
 
+    type Label={
+        text?:PlotlyText;
+        standoff?:number;
+    }
     type PlotlyAxis={
-        title?:PlotlyText|{text:PlotlyText;};
+        title?:Label;
         type?:"log"|"date";
         autorange?:boolean;
         /** indicate axis lower and higher limit (i.e. should have length 2) */
