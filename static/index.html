@@ -253,7 +253,7 @@
 							</table>
 						</div>
 					</div>
-					<div tabname="LAF debugs">
+					<div tabname="LAF debug">
 						<div>
 							<label>num steps</label><input type="number" x-model="laserAutofocusDebug_numz" step="2" min="3" max="99">
 							<label>delta z [um]</label><input type="number" x-model="laserAutofocusDebug_totalz_um" step="10" min="20" max="500">
@@ -261,7 +261,13 @@
 
 							<div
 								x-effect="updateLaserAutofocusDebugMeasurementDisplay($el)"
-								x-init="initLaserAutofocusDebugMeasurementDisplay($el)"></div>
+								x-init="initLaserAutofocusDebugMeasurementDisplay($el)">
+							</div>
+
+							<div>
+								<button x-on:click="button_laserAutofocusGetLatestImage">fetch laser autofocus image</button>
+								<canvas style="width:100%;" x-init="latestLaserAutofocusImageCanvas=$el"></canvas>
+							</div>
 						</div>
 					</div>
 				</div>

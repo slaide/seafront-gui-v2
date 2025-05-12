@@ -27,7 +27,7 @@ declare global {
         height_px: int;
         width_px: int;
         storage_path: string | undefined;
-        position: {};
+        position: AdapterPosition;
         timestamp: float;
     };
 
@@ -38,11 +38,7 @@ declare global {
         adapter_state: {
             is_in_loading_position: boolean;
             state: "idle";
-            stage_position: {
-                x_pos_mm: float;
-                y_pos_mm: float;
-                z_pos_mm: float;
-            };
+            stage_position: AdapterPosition;
         };
         current_acquisition_id: string | undefined;
         latest_imgs: {
@@ -363,11 +359,7 @@ declare global {
         calibration_data: {
             um_per_px: float,
             x_reference: float,
-            calibration_position: {
-                x_pos_mm: number,
-                y_pos_mm: number,
-                z_pos_mm: number
-            }
+            calibration_position: AdapterPosition;
         }
     };
     type LaserAutofocusMoveToTargetOffsetRequest={
@@ -385,6 +377,15 @@ declare global {
     };
     type LaserAutofocusMeasureDisplacementResponse={
         displacement_um:float,
+    };
+
+    type LaserAutofocusSnapRequest={
+        exposure_time_ms:float;
+        analog_gain:float;
+    };
+    type LaserAutofocusSnapResponse={
+        width_px:int;
+        height_px:int;
     };
 }
 

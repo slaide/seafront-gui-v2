@@ -154,6 +154,64 @@ document.addEventListener('alpine:init', () => {
         _numOpenWebsockets:0,
         /**
          * 
+         * @param {ChannelInfo} channel_info 
+         * @param {number} [downsample_factor=1] 
+         * @returns 
+         */
+        async fetch_image(channel_info,downsample_factor=1){
+            const cws = new WebSocket("http://localhost:5002/ws/get_info/acquired_image");
+
+            this._numOpenWebsockets++;
+
+            const channel_handle=channel_info.channel.handle;
+
+                    /**@type {Promise<CachedChannelImage>}*/
+                    const finished = new Promise((resolve, reject) => {
+                        // fetch image metadata
+                cws.binaryType = "blob";
+                cws.onopen = ev => cws.send(channel_handle);
+                        cws.onmessage = meta_ev => {
+                            /**
+                             * @type {{
+                             * height: number,
+                             * width: number,
+                             * bit_depth: number,
+                             * camera_bit_depth: number
+                             * }}
+                             */
+                    const metadata = JSON.parse(meta_ev.data);
+
+                            // fetch image data (into arraybuffer)
+                    cws.binaryType = "arraybuffer";
+                            cws.onmessage = img_ev => {
+                                /** @type {ArrayBuffer} */
+                        const img_data = img_ev.data;
+
+                                /** @type {CachedChannelImage} */
+                                const img = Object.assign(metadata, {
+                                    // store image data
+                                    data: img_data,
+                                    // update current channel info (latest image, incl. metadata)
+                                    info: channel_info,
+                        });
+
+                                // close websocket once data is received
+                        cws.close();
+                        this._numOpenWebsockets--;
+
+                        resolve(img);
+                            }
+                            // send downsample factor
+                    cws.send(`${downsample_factor}`);
+                        }
+                cws.onerror = ev => reject(ev);
+            });
+            const data = await finished;
+            console.log(data.info.channel.name, data);
+            return data;
+        },
+        /**
+         * 
          * @param {MicroscopeState} data 
          */
         async updateMicroscopeStatus(data){
@@ -180,54 +238,8 @@ document.addEventListener('alpine:init', () => {
                         continue
                     }
 
-                    const cws = new WebSocket("http://localhost:5002/ws/get_info/acquired_image")
-                    //console.log("opened websocket for", channel_handle)
-                    this._numOpenWebsockets++
-                    /**@type {Promise<CachedChannelImage>}*/
-                    const finished = new Promise((resolve, reject) => {
-                        // fetch image metadata
-                        cws.binaryType = "blob"
-                        cws.onopen = ev => cws.send(channel_handle)
-                        cws.onmessage = meta_ev => {
-                            /**
-                             * @type {{
-                             * height: number,
-                             * width: number,
-                             * bit_depth: number,
-                             * camera_bit_depth: number
-                             * }}
-                             */
-                            const metadata = JSON.parse(meta_ev.data)
-
-                            // fetch image data (into arraybuffer)
-                            cws.binaryType = "arraybuffer"
-                            cws.onmessage = img_ev => {
-                                /** @type {ArrayBuffer} */
-                                const img_data = img_ev.data
-
-                                /** @type {CachedChannelImage} */
-                                const img = Object.assign(metadata, {
-                                    // store image data
-                                    data: img_data,
-                                    // update current channel info (latest image, incl. metadata)
-                                    info: channel_info,
-                                })
-
-                                this.cached_channel_image.set(channel_handle, img)
-
-                                // close websocket once data is received
-                                cws.close()
-                                this._numOpenWebsockets--
-
-                                resolve(img)
-                            }
-                            // send downsample factor
-                            cws.send("2")
-                        }
-                        cws.onerror = ev => reject(ev)
-                    })
-                    const data = await finished
-                    console.log(data.info.channel.name, data)
+                    const img=await this.fetch_image(channel_info,2);
+                    this.cached_channel_image.set(channel_handle, img);
                 }
             }
 
@@ -733,6 +745,26 @@ document.addEventListener('alpine:init', () => {
                     return v;
                 });
             },
+            /**
+             * 
+             * @param {LaserAutofocusSnapRequest} body 
+             * @returns {Promise<LaserAutofocusSnapResponse>}
+             */
+            laserAutofocusSnap(body){
+                return fetch("http://localhost:5002/api/action/snap_reflection_autofocus", {
+                    method: "POST",
+                    body: JSON.stringify(body),
+                    headers: [
+                        ["Content-Type", "application/json"]
+                    ]
+                }).then(v=>{
+                    /** @ts-ignore @type {CheckMapSquidRequestFn<LaserAutofocusSnapResponse,InternalErrorModel>} */
+                    const check=checkMapSquidRequest;
+                    return check(v);
+                }).then(v => {
+                    return v;
+                });
+            },
         },
 
         /** @type {number} */
@@ -948,6 +980,52 @@ document.addEventListener('alpine:init', () => {
 
             // 4) flush results
             // nop
+        },
+
+        /** @type {HTMLCanvasElement|null} */
+        latestLaserAutofocusImageCanvas:null,
+        async button_laserAutofocusGetLatestImage(){
+            if(!this.latestLaserAutofocusImageCanvas)return;
+
+            const lafSnapRes=await this.Actions.laserAutofocusSnap({
+                // @ts-ignore
+                exposure_time_ms:this.getMachineConfigItem("laser_autofocus_exposure_time_ms").value,
+                // @ts-ignore
+                analog_gain:this.getMachineConfigItem("laser_autofocus_analog_gain").value,
+            });
+
+            const img=await this.fetch_image({
+                channel:{
+                    name:"",
+                    handle:"laser_autofocus",
+                    analog_gain:0,
+                    exposure_time_ms:0,
+                    illum_perc:0,
+                    num_z_planes:0,
+                    z_offset_um:0,
+                    enabled:true,
+                },
+                height_px:lafSnapRes.height_px,
+                width_px:lafSnapRes.width_px,
+                storage_path:"",
+                position:{x_pos_mm:0,y_pos_mm:0,z_pos_mm:0,},
+                timestamp:0,
+            });
+            const imgdata=new ImageData(img.width,img.height);
+            const rawimgdata=new Uint8ClampedArray(img.data);
+            for(let i=0;i<img.width*img.height;i++){
+                const px=rawimgdata[i];
+                imgdata.data[i*4+0]=px;
+                imgdata.data[i*4+1]=px;
+                imgdata.data[i*4+2]=px;
+                imgdata.data[i*4+3]=255;
+            }
+
+            this.latestLaserAutofocusImageCanvas.width = img.width;
+            this.latestLaserAutofocusImageCanvas.height = img.height;
+            let ctx = this.latestLaserAutofocusImageCanvas.getContext("2d");
+            if(!ctx)return;
+            ctx.putImageData(imgdata,0,0);
         },
 
         /**
