@@ -17,6 +17,16 @@ function getnumberofdecimaldigits(n) {
     return 0
 }
 
+class NumberInput extends HTMLInputElement {
+    get value() {
+        return parseFloat(super.value);
+    }
+    set value(v) {
+        super.value = v;
+    }
+}
+window.customElements.define("number-input", NumberInput, { extends: "input" });
+
 /**
  * register input event overrides on (functionally) number input element.
  * enforces numberic limits and step size while typing, so that the field may never contain invalid values.
@@ -24,7 +34,15 @@ function getnumberofdecimaldigits(n) {
  */
 export function registerNumberInput(el) {
     // ensure element is supposed to be a number input
-    if (el.type != "number") { console.warn(`called registerNumberInput on element with type=${el.type}`, el); return }
+    if (el.type !== "number"){
+        console.warn(`called registerNumberInput on element with type=${el.type}`, el);
+        return;
+    }
+
+    if(el.getAttribute("is") !== "number-input"){
+        console.warn("number input registered must have attribute is='number-input' for x-model to work.",el)
+        return;
+    }
 
     // change its type to text input, because a browser with type=number will not
     // allow certain operations on the element input.

@@ -79,7 +79,7 @@ function makeRoundedQuad(aabb, mat, opts) {
     // ensure border radius makes sense
     if (border_radius < 0 || border_radius > width / 2 || border_radius > height / 2) throw `border radius ${border_radius} is out of bounds [0;min(${width / 2},${height / 2})]`;
 
-    const geo = (0 ? RoundedRectangleNonindexed : RoundedRectangleIndexed)(width, height, border_radius, segments);
+    const geo = RoundedRectangleIndexed(width, height, border_radius, segments);
 
     // center of quad is at (0,0) -> adjust to aabb
     geo.translate(width / 2 + aabb.ax, height / 2 + aabb.ay, 0);
@@ -99,81 +99,6 @@ function makeRoundedQuad(aabb, mat, opts) {
     // square with rounded edge generator implementations from https://discourse.threejs.org/t/how-to-make-rounded-edge-in-plane-geometry/64048/4
 
     /**
-     * non indexed BufferGeometry
-     * @param {number} w width
-     * @param {number} h height
-     * @param {number} r corner radius
-     * @param {number} s smoothness
-     * @returns 
-     */
-    function RoundedRectangleNonindexed(w, h, r, s) {
-
-        // helper const's
-        const wi = w / 2 - r;		// inner width
-        const hi = h / 2 - r;		// inner height
-        const w2 = w / 2;			// half width
-        const h2 = h / 2;			// half height
-        const ul = r / w;			// u left
-        const ur = (w - r) / w;	// u right
-        const vl = r / h;			// v low
-        const vh = (h - r) / h;	// v high
-
-        let positions = [
-
-            -wi, -h2, 0, wi, -h2, 0, wi, h2, 0,
-            -wi, -h2, 0, wi, h2, 0, -wi, h2, 0,
-            -w2, -hi, 0, -wi, -hi, 0, -wi, hi, 0,
-            -w2, -hi, 0, -wi, hi, 0, -w2, hi, 0,
-            wi, -hi, 0, w2, -hi, 0, w2, hi, 0,
-            wi, -hi, 0, w2, hi, 0, wi, hi, 0
-
-        ];
-
-        let uvs = [
-
-            ul, 0, ur, 0, ur, 1,
-            ul, 0, ur, 1, ul, 1,
-            0, vl, ul, vl, ul, vh,
-            0, vl, ul, vh, 0, vh,
-            ur, vl, 1, vl, 1, vh,
-            ur, vl, 1, vh, ur, vh
-
-        ];
-
-        let phia = 0;
-        let phib, xc, yc, uc, vc, cosa, sina, cosb, sinb;
-
-        for (let i = 0; i < s * 4; i++) {
-
-            phib = Math.PI * 2 * (i + 1) / (4 * s);
-
-            cosa = Math.cos(phia);
-            sina = Math.sin(phia);
-            cosb = Math.cos(phib);
-            sinb = Math.sin(phib);
-
-            xc = i < s || i >= 3 * s ? wi : -wi;
-            yc = i < 2 * s ? hi : -hi;
-
-            positions.push(xc, yc, 0, xc + r * cosa, yc + r * sina, 0, xc + r * cosb, yc + r * sinb, 0);
-
-            uc = i < s || i >= 3 * s ? ur : ul;
-            vc = i < 2 * s ? vh : vl;
-
-            uvs.push(uc, vc, uc + ul * cosa, vc + vl * sina, uc + ul * cosb, vc + vl * sinb);
-
-            phia = phib;
-
-        }
-
-        const geometry = new THREE.BufferGeometry();
-        geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(positions), 3));
-        geometry.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(uvs), 2));
-
-        return geometry;
-    }
-
-    /**
      * indexed BufferGeometry
      * @param {number} w width
      * @param {number} h height
@@ -182,74 +107,49 @@ function makeRoundedQuad(aabb, mat, opts) {
      * @returns 
      */
     function RoundedRectangleIndexed(w, h, r, s) {
+        const wi = w / 2 - r;   // inner width
+        const hi = h / 2 - r;   // inner height
+        const ul = r / w;       // u left
+        const ur = (w - r) / w; // u right
+        const vl = r / h;       // v low
+        const vh = (h - r) / h; // v high	
 
-        // helper const's
-        const wi = w / 2 - r;		// inner width
-        const hi = h / 2 - r;		// inner height
-        const w2 = w / 2;			// half width
-        const h2 = h / 2;			// half height
-        const ul = r / w;			// u left
-        const ur = (w - r) / w;	// u right
-        const vl = r / h;			// v low
-        const vh = (h - r) / h;	// v high	
+        let positions = [ wi, hi, 0, -wi, hi, 0, -wi, -hi, 0, wi, -hi, 0 ];
 
-        let positions = [
-
-            wi, hi, 0, -wi, hi, 0, -wi, -hi, 0, wi, -hi, 0
-
-        ];
-
-        let uvs = [
-
-            ur, vh, ul, vh, ul, vl, ur, vl
-
-        ];
+        let uvs = [ ur, vh, ul, vh, ul, vl, ur, vl ];
 
         let n = [
-
             3 * (s + 1) + 3, 3 * (s + 1) + 4, s + 4, s + 5,
             2 * (s + 1) + 4, 2, 1, 2 * (s + 1) + 3,
             3, 4 * (s + 1) + 3, 4, 0
-
         ];
 
         let indices = [
-
             n[0], n[1], n[2], n[0], n[2], n[3],
             n[4], n[5], n[6], n[4], n[6], n[7],
             n[8], n[9], n[10], n[8], n[10], n[11]
-
         ];
 
-        let phi, cos, sin, xc, yc, uc, vc, idx;
-
         for (let i = 0; i < 4; i++) {
+            const xc = i < 1 || i > 2 ? wi : -wi;
+            const yc = i < 2 ? hi : -hi;
 
-            xc = i < 1 || i > 2 ? wi : -wi;
-            yc = i < 2 ? hi : -hi;
-
-            uc = i < 1 || i > 2 ? ur : ul;
-            vc = i < 2 ? vh : vl;
+            const uc = i < 1 || i > 2 ? ur : ul;
+            const vc = i < 2 ? vh : vl;
 
             for (let j = 0; j <= s; j++) {
-
-                phi = Math.PI / 2 * (i + j / s);
-                cos = Math.cos(phi);
-                sin = Math.sin(phi);
+                const phi = Math.PI / 2 * (i + j / s);
+                const cos = Math.cos(phi);
+                const sin = Math.sin(phi);
 
                 positions.push(xc + r * cos, yc + r * sin, 0);
-
                 uvs.push(uc + ul * cos, vc + vl * sin);
 
                 if (j < s) {
-
-                    idx = (s + 1) * i + j + 4;
+                    const idx = (s + 1) * i + j + 4;
                     indices.push(i, idx, idx + 1);
-
                 }
-
             }
-
         }
 
         const geometry = new THREE.BufferGeometry();
@@ -258,7 +158,6 @@ function makeRoundedQuad(aabb, mat, opts) {
         geometry.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(uvs), 2));
 
         return geometry;
-
     }
 }
 

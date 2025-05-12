@@ -45,6 +45,22 @@ window.addEventListener("load", () => {
 });
 
 /**
+ * clone an object.
+ * 
+ * attempts structuredClone first, with fallback to json round trip.
+ * @template T
+ * @param {T} o 
+ * @returns {T}
+ */
+function cloneObject(o){
+    try{
+        return structuredClone(o);
+    }catch(e){
+        return JSON.parse(JSON.stringify(o));
+    }
+}
+
+/**
  * @template T
  * @template {object} E
  * @type {CheckMapSquidRequestFn<T,E>}
@@ -216,8 +232,7 @@ document.addEventListener('alpine:init', () => {
          */
         async updateMicroscopeStatus(data){
             const timestamps = []
-            // structuredClone(data).latest_imgs?.map((c, k) => c.timestamp)
-            // console.log(structuredClone(data.latest_imgs))
+
             for (let channelhandle of Object.keys(data.latest_imgs)) {
                 const channel = data.latest_imgs[channelhandle]
                 timestamps.push(channel.timestamp)
@@ -302,7 +317,7 @@ document.addEventListener('alpine:init', () => {
 
         /** a copy of this is required often, but non-trivial to construct, so the utility is provided here. */
         get microscope_config_copy(){
-            return JSON.parse(JSON.stringify(this.microscope_config));
+            return cloneObject(this.microscope_config);
         },
 
         /** used to filter the machine config list */
@@ -468,7 +483,7 @@ document.addEventListener('alpine:init', () => {
         async acquisition_start(body){
             // make deep copy first
             /** @type {AcquisitionStartRequest} */
-            const body_copy=structuredClone(body);
+            const body_copy=cloneObject(body);
 
             // mutate copy (to fix some errors we introduce in the interface)
             // 1) remove wells that are unselected or invalid
