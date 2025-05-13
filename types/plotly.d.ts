@@ -223,10 +223,43 @@ declare global{
     type PlotlyAxis={
         title?:Label;
         type?:"log"|"date";
-        autorange?:boolean;
-        /** indicate axis lower and higher limit (i.e. should have length 2) */
-        range?:number[];
         fixedrange?:boolean;
+        /** min value allowed in range. Even explicitly setting range:[a,b] can't go past this. */
+        minallowed?:number;
+        /** max value allowed in range. Even explicitly setting range:[a,b] can't go past this.
+    must be more than minallowed */
+        maxallowed?:number;
+        /**
+         * useful in combination with `fixedrange`.
+         * 
+         * indicate axis lower and higher limit (i.e. should have length 2)
+         * 
+         * allowed to leave either or both elements `null`, this impacts the default `autorange`.
+         * */
+        range?:number[];
+        /** if 'min' or 'max' is in the value, only autorange that end, use existing `range` entry for the other end
+    if range[0] is missing, 'min' is the default and false, 'max', and 'min reversed' are prohibited
+    if range[1] is missing, 'max' is the default and false, 'min', and 'max reversed' are prohibited */
+        autorange?:boolean|'min'|'max'|'min reversed'|'max reversed'|'reversed';
+        /**
+         * useful in combination with `autorange`.
+         * 
+         * allows setting range limits for autorange.
+         * (requires manual scaling if axis type is not linear, e.g. if type=log -> autorangeoptions.minallow=Math.log(actualLowerLimit))
+         * 
+         * https://github.com/plotly/plotly.js/pull/6547#issuecomment-1546236028
+         * */
+        autorangeoptions?:{
+            /** do not let min autorange go below this. Ignore if autorange = false, 'max', 'max reversed',
+        or if it's <axis.minallowed or >axis.maxallowed */
+            minallowed?:number;
+            /** do not let max autorange go above this. Ignore if autorange = false, 'min', 'min reversed',
+        or if it's <axis.minallowed or >axis.maxallowed */
+            maxallowed?:number;
+            /** ensure the autorange min <= and max >= these values,
+        ignore any num outside either set of min/maxallowed constraints */
+            include?: number|number[];
+        };
 
         showline?:boolean;
         showgrid?:boolean;

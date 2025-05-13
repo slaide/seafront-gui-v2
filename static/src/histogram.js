@@ -16,9 +16,11 @@ export const histogramLayout = {
 
     yaxis: {
         title: {text:"relative frequency ( Log )",standoff:0,},
-        // type: 'log',
+        type: 'log',
         autorange: true,
-        fixedrange: true,
+        autorangeoptions:{
+            minallowed:Math.log(1),
+        },
         // disable ticks
         showticklabels: false,
     },
