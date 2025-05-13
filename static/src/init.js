@@ -451,7 +451,6 @@ document.addEventListener('alpine:init', () => {
         /** @type {Map<string,CachedChannelImage>} */
         cached_channel_image: new Map(),
 
-
         makeHistogram,
         /**
          * 
@@ -467,6 +466,11 @@ document.addEventListener('alpine:init', () => {
             })){
                 // key is handle, i.e. key===value.info.channel.handle (which is not terribly useful for displaying)
                 const name=value.info.channel.name;
+
+                // skip channels that are not enabled
+                if(! (this.microscope_config.channels.find(c=>c.handle==key)?.enabled??false)){
+                    continue;
+                }
 
                 const y=new Float32Array(xvalues.length);
 

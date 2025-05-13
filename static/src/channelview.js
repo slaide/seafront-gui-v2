@@ -25,6 +25,7 @@ export class ChannelImageView {
         /** @type {SceneInfo[]} */
         this.sceneInfos = []
 
+        // toggle drawing loop based on visibility of the plot container
         const observer = new IntersectionObserver((entries) => {
             entries.forEach(entry => {
                 // entry.isIntersecting will be true if the element is visible in the viewport
@@ -123,16 +124,19 @@ export class ChannelImageView {
         // 2. Create a DataTexture using the LuminanceFormat to preserve the single-channel data.
         let datatype
         let imgdata
-        if (imageinfo.bit_depth == 8) {
-            datatype = THREE.UnsignedByteType
-            imgdata = new Uint8Array(imageinfo.data)
-
-        } else if (imageinfo.bit_depth == 16) {
-            datatype = THREE.UnsignedShortType
-            imgdata = new Uint16Array(imageinfo.data)
-
-        } else {
-            throw `unknown bitdepth ${imageinfo.bit_depth} ${Array.from(Object.keys(imageinfo))}`
+        switch(imageinfo.bit_depth){
+            case 8:{
+                datatype = THREE.UnsignedByteType;
+                imgdata = new Uint8Array(imageinfo.data);
+                break;
+            }
+            case 16:{
+                datatype = THREE.UnsignedShortType;
+                imgdata = new Uint16Array(imageinfo.data);
+                break;
+            }
+            default:
+                throw `unknown bitdepth ${imageinfo.bit_depth} ${Array.from(Object.keys(imageinfo))}`;
         }
 
         return { imgdata, datatype }
@@ -240,50 +244,6 @@ export class ChannelImageView {
         camera.bottom = center.y - height / 2
         //console.log("set camera bounding box to", center.x - width / 2, center.x + width / 2, center.y + height / 2, center.y - height / 2)
     }
-    /**
-     * render one channel
-     * @param {SceneInfo} sceneInfo 
-     * @returns 
-     */
-    renderSceneInfo(sceneInfo) {
-        const { scene, camera, elem } = sceneInfo;
-
-        // get the viewport relative position of this element
-        const { left, right, top, bottom, width, height } =
-            elem.getBoundingClientRect();
-
-        const isOffscreen =
-            bottom < 0 ||
-            top > this.getRect().height ||
-            right < 0 ||
-            left > this.getRect().width;
-
-        if (isOffscreen) {
-            return;
-        }
-
-        if (sceneInfo.img?.texture) {
-            this.cameraFit(camera, {
-                height: sceneInfo.img.height,
-                width: sceneInfo.img.width,
-                center: {
-                    x: 0,//sceneInfo.img.width/2,
-                    y: 0,//sceneInfo.img.height/2,
-                },
-                aspect_ratio: elem.getBoundingClientRect().width / elem.getBoundingClientRect().height
-            })
-        } else {
-            camera.aspect = width / height;
-        }
-        camera.updateProjectionMatrix();
-
-        const canvasRect = this.getRect()
-        const positiveYUpBottom = canvasRect.y + canvasRect.height - bottom;
-        this.renderer.setScissor(left, positiveYUpBottom, width, height);
-        this.renderer.setViewport(left, positiveYUpBottom, width, height);
-
-        this.renderer.render(scene, camera);
-    }
 
     /**
      * Function to update the texture with 8 random byte values
@@ -326,11 +286,66 @@ export class ChannelImageView {
     }
 
     /**
+     * render one channel
+     * @param {SceneInfo} sceneInfo 
+     * @returns 
+     */
+    renderSceneInfo(sceneInfo) {
+        const { channelhandle, scene, camera } = sceneInfo;
+
+        const elem=document.getElementById(`channelview-item-${channelhandle}`);
+        if(!elem){
+            // console.error(`could not element with id 'channelview-item-${channelhandle}'`);
+            return;
+        }
+
+        // get the viewport relative position of this element
+        const { left, right, top, bottom, width, height } =
+            elem.getBoundingClientRect();
+
+        const isOffscreen =
+            bottom < 0 ||
+            top > this.getRect().height ||
+            right < 0 ||
+            left > this.getRect().width;
+
+        if (isOffscreen) {
+            return;
+        }
+
+        if (sceneInfo.img?.texture) {
+            this.cameraFit(camera, {
+                height: sceneInfo.img.height,
+                width: sceneInfo.img.width,
+                center: {
+                    x: 0,//sceneInfo.img.width/2,
+                    y: 0,//sceneInfo.img.height/2,
+                },
+                aspect_ratio: elem.getBoundingClientRect().width / elem.getBoundingClientRect().height
+            })
+        } else {
+            camera.aspect = width / height;
+        }
+        camera.updateProjectionMatrix();
+
+        const canvasRect = this.getRect()
+        const positiveYUpBottom = canvasRect.y + canvasRect.height - bottom;
+        this.renderer.setScissor(left, positiveYUpBottom, width, height);
+        this.renderer.setViewport(left, positiveYUpBottom, width, height);
+
+        this.renderer.render(scene, camera);
+    }
+
+    /**
      * @param {number} time deltatime
      */
     _render(time) {
         if (this.resizeRendererToDisplaySize(this.renderer)) {
-            console.log("resized");
+            // (resizing happens inside resizeRendererToDisplaySize, and just returns
+            // true to indicate if resizing has taken place. code path here may be used
+            // to check that resizing actually just happens on demand)
+
+            // console.log("resized");
         }
 
         this.renderer.setScissorTest(false);
@@ -341,7 +356,7 @@ export class ChannelImageView {
         // updateTextureData(sceneInfos[1].img.texture);
 
         for (let sceneInfo of this.sceneInfos) {
-            this.renderSceneInfo(sceneInfo)
+            this.renderSceneInfo(sceneInfo);
         }
     }
 

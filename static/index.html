@@ -160,6 +160,7 @@
 								<div class="channel-box" x-bind:channelhandle="channel.handle">
 									<div x-bind:id="`channel-display-${channel.handle}`" x-text="channel.name"></div>
 									<div x-effect="updateChannelCache($el)" class="channel-box-image"
+										x-bind:id="`channelview-item-${channel.handle}`"
 										style="border:1em white;"></div>
 								</div>
 							</template>
