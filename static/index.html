@@ -127,18 +127,12 @@
 						</p>
 					</div>
 					<div tabname="channel view" style="position:relative;">
-						<style>
-							#grid-container {
-								display: grid;
-								--num-cols:2;
-								grid-template-columns: repeat(var(--num-cols), 1fr);
-
-								.channel-box-image {
-									aspect-ratio: 1;
-								}
-							}
-						</style>
-
+						<div>
+							<label>num columns</label>
+							<input type=number is="number-input"
+								min=1 max=4 step=1 x-model="channelViewNumCols"
+								x-init="registerNumberInput($el)">
+						</div>
 						<canvas id="c" x-init="await initChannelView($el)"></canvas>
 						<style>
 							#c {
@@ -153,8 +147,18 @@
 								display: block;
 								z-index: -1;
 							}
+
+							#grid-container {
+								display: grid;
+								--num-cols:3;
+								grid-template-columns: repeat(var(--num-cols), 1fr);
+
+								.channel-box-image {
+									aspect-ratio: 1;
+								}
+							}
 						</style>
-						<div id=grid-container>
+						<div id=grid-container x-bind:style="`--num-cols:${channelViewNumCols};`">
 							<!--div x-html="cached_channel_image.get('fluo405').info.timestamp"></div-->
 							<template x-for="channel in microscope_config.channels.filter(c=>c.enabled)">
 								<div class="channel-box" x-bind:channelhandle="channel.handle">

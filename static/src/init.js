@@ -411,6 +411,8 @@ document.addEventListener('alpine:init', () => {
         },
         /** @type {ChannelImageView|null} */
         view: null,
+        /** @type {number} */
+        channelViewNumCols:3,
 
         /**
          * call this to update the display for a channel
