@@ -18,10 +18,13 @@ function getnumberofdecimaldigits(n) {
 }
 
 class NumberInput extends HTMLInputElement {
+    // @ts-ignore
     get value() {
         return parseFloat(super.value);
     }
+    // @ts-ignore
     set value(v) {
+        // @ts-ignore
         super.value = v;
     }
 }
@@ -122,10 +125,18 @@ export function registerNumberInput(el) {
                     // prevent cursor from moving to start of input
                     event.preventDefault();
                     el.value = formatNumberInput(currentvalue + stepvalue);
+
+                    // flush change
+                    el.dispatchEvent(new Event('input'));
+                    return;
                 } else if (event.key == "ArrowDown") {
                     // prevent cursor from moving to end of input
                     event.preventDefault();
                     el.value = formatNumberInput(currentvalue - stepvalue);
+
+                    // flush change
+                    el.dispatchEvent(new Event('input'));
+                    return;
                 }
             }
             return;
@@ -138,6 +149,7 @@ export function registerNumberInput(el) {
         if (!(eventTarget instanceof HTMLInputElement)) throw new Error("");
         let selectionstart = eventTarget.selectionStart ?? 0;
         let selectionend = eventTarget.selectionEnd ?? eventTarget.value.length;
+
         let modifiedinput = parseFloat(
             el.value.toString().substring(0, selectionstart)
             + event.key
