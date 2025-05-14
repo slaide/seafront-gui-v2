@@ -89,7 +89,10 @@
 					overflow: hidden hidden;
 
 					display: grid;
-					grid-template: "a b" auto / 2fr 1fr;
+					grid-template:
+						"a b" auto
+						"f f" 2em
+						/ 2fr 1fr;
 
 					#leftcol,
 					#rightcol {
@@ -729,6 +732,19 @@
 						</div>
 					</div>
 				</div>
+			</div>
+
+			<div id="bottom-bar">
+				<style>
+					#bottom-bar{
+						border-top:1px solid black;
+						grid-area: f;
+					}
+				</style>
+				<label>server url</label>
+				<input type="text" x-model="server_url">
+				<label>microscope</label>
+				<span x-text="getMachineConfigItem('microscope_name')?.value??'(none)'"></span>
 			</div>
 		</div>
 	</template>
