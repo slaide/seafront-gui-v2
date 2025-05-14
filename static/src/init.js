@@ -532,6 +532,9 @@ document.addEventListener('alpine:init', () => {
         /** used to filter the machine config list */
         machineConfigHandleFilter:"",
 
+        /** indicate of connection to server is currently established */
+        isConnectedToServer:false,
+
         // this is an annoying workaround (in combination with initManual) because
         // alpine does not actually await an async init before mounting the element.
         // which leads to a whole bunch of errors in the console and breaks
@@ -542,8 +545,8 @@ document.addEventListener('alpine:init', () => {
 
             // init data
             const currentStateData = await fetch(`${this.server_url}/api/get_info/current_state`, {
-                "method": "POST",
-                "body": "{}"
+                method: "POST",
+                body: "{}"
             });
             if (!currentStateData.ok) throw `error in fetch. http status: ${currentStateData.status}`;
             const currentStateJson = await currentStateData.json();
@@ -553,9 +556,14 @@ document.addEventListener('alpine:init', () => {
             /** @type {{ws?:WebSocket}} */
             let ws = {}
             const reconnect=()=>{
+                // reconnection is only attempted if connection is not currently established
+                this.isConnectedToServer=false;
+
                 try{
                     // ensure old websocket handle is closed
                     if (ws.ws != null && ws.ws.readyState != WebSocket.CLOSED) {
+                        this.isConnectedToServer=false;
+
                         ws.ws.close();
                     }
 
@@ -564,21 +572,28 @@ document.addEventListener('alpine:init', () => {
                     ws.ws.onmessage = async ev => {
                         const data = JSON.parse(JSON.parse(ev.data));
                         await this.updateMicroscopeStatus(data);
+                        
+                        // if we got this far, the connection to the server is established
+                        this.isConnectedToServer=true;
 
-                        requestAnimationFrame(getstate);
+                        requestAnimationFrame(getstate_loop);
                     };
                     ws.ws.onerror = ev => {
+                        this.isConnectedToServer=false;
+
                         // wait a short time before attempting to reconnect
                         setTimeout(() => reconnect(), 200);
                     };
-                    ws.ws.onopen = ev => requestAnimationFrame(getstate);
+                    ws.ws.onopen = ev => requestAnimationFrame(getstate_loop);
                 }catch(e){
+                    this.isConnectedToServer=false;
+
                     console.warn(`websocket error: ${e}`);
                     setTimeout(() => reconnect(), 200);
                 }
             };
 
-            function getstate() {
+            function getstate_loop() {
                 try {
                     if (!ws.ws || ws.ws.readyState == WebSocket.CLOSED) {
                         // trigger catch clause which will reconnect
@@ -589,14 +604,16 @@ document.addEventListener('alpine:init', () => {
                     } else {
                         // console.log(ws.ws.readyState, WebSocket.CLOSED, WebSocket.CONNECTING, WebSocket.OPEN)
                         // if websocket is not yet ready, try again later
-                        requestAnimationFrame(getstate);
+                        requestAnimationFrame(getstate_loop);
                     }
                 } catch (e) {
+                    this.isConnectedToServer=false;
+
                     // wait a short time before attempting to reconnect
                     setTimeout(() => reconnect(), 200);
                 }
             }
-            getstate();
+            getstate_loop();
         },
 
         /**

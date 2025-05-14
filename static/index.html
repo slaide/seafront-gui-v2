@@ -741,8 +741,28 @@
 						grid-area: f;
 					}
 				</style>
-				<label>server url</label>
+				<label>server</label>
 				<input type="text" x-model="server_url">
+
+				<div x-bind:class="`connection-indicator ${isConnectedToServer?'connected':''}`"
+					x-bind:tooltip="`this web interface ${isConnectedToServer?'is':'is NOT'} currently connected to the server at ${server_url} `"
+					x-init="enabletooltip($el)"
+					>&nbsp;</div>
+				<style>
+					.connection-indicator{
+						display: inline-block;
+						aspect-ratio: 1/1;
+						height:1.2em;
+						border-radius: 50%;
+					}
+					.connection-indicator.connected{
+						background-color: #2ace1b;
+					}
+					.connection-indicator:not(.connected){
+						background-color: #e74c3c;
+					}
+				</style>
+
 				<label>microscope</label>
 				<span x-text="getMachineConfigItem('microscope_name')?.value??'(none)'"></span>
 			</div>
