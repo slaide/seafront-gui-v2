@@ -14,8 +14,6 @@ Object.assign(window, { matWellColor, matSiteColor, matFovColor });
 import { registerNumberInput } from "numberinput";
 Object.assign(window, { registerNumberInput });
 
-import { loadConfig, storeConfig, getConfigList, getMachineDefaults, getHardwareCapabilities, getPlateTypes, defaultConfig } from "microscope_setup";
-
 import { ChannelImageView } from "channelview";
 
 import { enabletooltip } from "tooltip";
@@ -90,20 +88,220 @@ Object.assign(window,{checkMapSquidRequest});
 
 document.addEventListener('alpine:init', () => {
     Alpine.data('microscope_state', () => ({
-        // add functions defined elsewhere
-        getMachineDefaults,
-        getHardwareCapabilities,
-        getPlateTypes,
-        defaultConfig,
+        server_url:"http://127.0.0.1:5002",
 
-        getConfigList,
+        /**
+         * @returns {Promise<HardwareCapabilities>}
+         */
+        async getHardwareCapabilities() {
+            const plateinfo=await fetch("http://localhost:5002/api/get_features/hardware_capabilities",{
+                method:"POST",
+                body:"{}",
+                headers: [
+                    ["Content-Type", "application/json"]
+                ]
+            }).then(v=>{
+                /** @ts-ignore @type {CheckMapSquidRequestFn<HardwareCapabilities,InternalErrorModel>} */
+                const check=checkMapSquidRequest;
+                return check(v);
+            });
+
+            return plateinfo;
+        },
+        /**
+         * @returns {Promise<MachineDefaults>}
+         */
+        async getMachineDefaults(){
+            const machinedefaults=await fetch("http://localhost:5002/api/get_features/machine_defaults",{
+                method:"POST",
+                body:"{}",
+                headers: [
+                    ["Content-Type", "application/json"]
+                ]
+            }).then(v=>{
+                /** @ts-ignore @type {CheckMapSquidRequestFn<MachineDefaults,InternalErrorModel>} */
+                const check=checkMapSquidRequest;
+                return check(v);
+            });
+            console.log("got machine defaults",structuredClone(machinedefaults));
+
+            return machinedefaults;
+        },
+
+        /**
+         * @returns {Promise<ConfigListResponse>}
+         */
+        async getConfigList(){
+            const configlist=await fetch("http://localhost:5002/api/acquisition/config_list",{
+                method:"POST",
+                body:"{}",
+                headers: [
+                    ["Content-Type", "application/json"]
+                ]
+            }).then(v=>{
+                /** @ts-ignore @type {CheckMapSquidRequestFn<ConfigListResponse,InternalErrorModel>} */
+                const check=checkMapSquidRequest;
+                return check(v)
+            });
+
+            return configlist;
+        },
+
+        /**
+         * @param {StoreConfigRequest} body
+         * @returns {Promise<StoreConfigResponse>}
+         */
+        async storeConfig(body){
+            const response=await fetch("http://localhost:5002/api/acquisition/config_store",{
+                method:"POST",
+                body:JSON.stringify(body),
+                headers: [
+                    ["Content-Type", "application/json"]
+                ]
+            }).then(v=>{
+                /** @ts-ignore @type {CheckMapSquidRequestFn<StoreConfigResponse,InternalErrorModel>} */
+                const check=checkMapSquidRequest;
+                return check(v);
+            });
+
+            return response;
+        },
+
+        /**
+         * @param {LoadConfigRequest} body
+         * @returns {Promise<LoadConfigResponse>}
+         */
+        async loadConfig(body){
+            const response=await fetch("http://localhost:5002/api/acquisition/config_fetch",{
+                method:"POST",
+                body:JSON.stringify(body),
+                headers: [
+                    ["Content-Type", "application/json"]
+                ]
+            }).then(v=>{
+                /** @ts-ignore @type {CheckMapSquidRequestFn<LoadConfigResponse,InternalErrorModel>} */
+                const check=checkMapSquidRequest;
+                return check(v);
+            });
+
+            return response;
+        },
+
+        /**
+         * get plate types from server
+         * @returns {Promise<{plategroups:WellPlateGroup[],allplates:Wellplate[]}>}
+         * */
+        async getPlateTypes() {
+            let data = await this.getHardwareCapabilities();
+
+            /** @type {{plategroups:WellPlateGroup[],allplates:Wellplate[]}} */
+            let plateinfo = { allplates: [], plategroups: [] };
+
+            for (const key in data.wellplate_types) {
+                const value = data.wellplate_types[key];
+
+                // make copy of plate type
+                /** @type {Wellplate} */
+                const newplate = structuredClone(value)
+
+                plateinfo.allplates.push(newplate)
+
+                /** @type {WellPlateGroup|undefined} */
+                let plategroup = plateinfo.plategroups.find(g => g.numwells == newplate.Num_wells_x*newplate.Num_wells_y)
+                if (!plategroup) {
+                    plategroup = {
+                        label: `${newplate.Num_wells_x*newplate.Num_wells_y} well plate`,
+                        numwells: newplate.Num_wells_x*newplate.Num_wells_y,
+                        plates: [],
+                    }
+                    plateinfo.plategroups.push(plategroup)
+                }
+                plategroup.plates.push(newplate)
+            }
+
+            // sort by number of wells, in descending order
+            plateinfo.plategroups.sort((g1, g2) => parseInt("" + g1.numwells) - parseInt("" + g2.numwells))
+
+            return plateinfo
+        },
+
+        /**
+         * @return {Promise<AcquisitionConfig>}
+         **/
+        async defaultConfig() {
+            /** @ts-ignore @type {AcquisitionConfig} */
+            let microscope_config = {}
+
+            /** @type {AcquisitionConfig} */
+            let referenceConfig = {
+                project_name: "",
+                plate_name: "",
+                cell_line: "",
+
+                autofocus_enabled: false,
+
+                grid: {
+                    num_x: 1,
+                    delta_x_mm: 0.9,
+
+                    num_y: 1,
+                    delta_y_mm: 0.9,
+
+                    num_t: 1,
+                    delta_t: {
+                        h: 2,
+                        m: 1,
+                        s: 4,
+                    },
+
+                    mask: [{ row: 0, col: 0, selected: true }]
+                },
+
+                // some [arbitrary] default
+                wellplate_type: {
+                    "Manufacturer": "Revvity",
+                    "Model_name": "PhenoPlate 384-well",
+                    "Model_id_manufacturer": "6057800",
+                    "Model_id": "revvity-384-6057800",
+                    "Offset_A1_x_mm": 10.5,
+                    "Offset_A1_y_mm": 7.36,
+                    "Offset_bottom_mm": 0.32799999999999996,
+                    "Well_distance_x_mm": 4.5,
+                    "Well_distance_y_mm": 4.5,
+                    "Well_size_x_mm": 3.26,
+                    "Well_size_y_mm": 3.26,
+                    "Num_wells_x": 24,
+                    "Num_wells_y": 16,
+                    "Length_mm": 127.76,
+                    "Width_mm": 85.48,
+                    "Well_edge_radius_mm": 0.1
+                },
+
+                plate_wells: [{ col: 0, row: 0, selected: true }],
+
+                channels: (await this.getHardwareCapabilities()).main_camera_imaging_channels,
+
+                machine_config: await this.getMachineDefaults(),
+                comment: "",
+                spec_version: {
+                    major: 0,
+                    minor: 0,
+                    patch: 0
+                },
+                timestamp: null
+            }
+
+            Object.assign(microscope_config, referenceConfig)
+
+            return microscope_config
+        },
+
         /** protocols stored on server @type {ConfigListEntry[]} */
         protocol_list:[],
         async refreshConfigList(){
-            this.protocol_list=(await getConfigList()).configs;
+            this.protocol_list=(await this.getConfigList()).configs;
         },
-        storeConfig,
-        loadConfig,
+
         /** used in GUI to configure filename when storing current config on server */
         configStore_filename:"",
         configStore_overwrite_on_conflict:false,
@@ -116,7 +314,7 @@ document.addEventListener('alpine:init', () => {
                 comment:this.microscope_config.comment,
                 overwrite_on_conflict:this.configStore_overwrite_on_conflict,
             };
-            await storeConfig(configStoreEntry);
+            await this.storeConfig(configStoreEntry);
 
             // ensure no config is overwritten by accident afterwards
             this.configStore_overwrite_on_conflict=false;
@@ -159,7 +357,7 @@ document.addEventListener('alpine:init', () => {
                 throw `cannot runMachineConfigAction on non-action config ${config.handle} (kind=${config.value_kind})`;
             }
 
-            const action_url=`http://localhost:5002${config.value}`;
+            const action_url=`${this.server_url}${config.value}`;
             console.log(`executing action: '${action_url}'`)
             return fetch(action_url, {
                 method: "POST",
@@ -183,7 +381,7 @@ document.addEventListener('alpine:init', () => {
          * @returns 
          */
         async fetch_image(channel_info,downsample_factor=1){
-            const cws = new WebSocket("http://localhost:5002/ws/get_info/acquired_image");
+            const cws = new WebSocket(`${this.server_url}/ws/get_info/acquired_image`);
 
             this._numOpenWebsockets++;
 
@@ -339,11 +537,11 @@ document.addEventListener('alpine:init', () => {
         // which leads to a whole bunch of errors in the console and breaks
         // some functionalities that depend on fields being initialized on mounting.
         async initSelf() {
-            this._plateinfo=await getPlateTypes();
-            this._microscope_config=await defaultConfig();
+            this._plateinfo=await this.getPlateTypes();
+            this._microscope_config=await this.defaultConfig();
 
             // init data
-            const currentStateData = await fetch("http://localhost:5002/api/get_info/current_state", {
+            const currentStateData = await fetch(`${this.server_url}/api/get_info/current_state`, {
                 "method": "POST",
                 "body": "{}"
             });
@@ -362,7 +560,7 @@ document.addEventListener('alpine:init', () => {
                     }
 
                     // try reconnecting (may fail if server is closed, in which case just try reconnecting later)
-                    ws.ws = new WebSocket("http://localhost:5002/ws/get_info/current_state");
+                    ws.ws = new WebSocket(`${this.server_url}/ws/get_info/current_state`);
                     ws.ws.onmessage = async ev => {
                         const data = JSON.parse(JSON.parse(ev.data));
                         await this.updateMicroscopeStatus(data);
@@ -488,7 +686,9 @@ document.addEventListener('alpine:init', () => {
                 }
                 data.push({
                     name,
+                    // @ts-ignore
                     x:xvalues,
+                    // @ts-ignore
                     y
                 });
             }
@@ -562,7 +762,7 @@ document.addEventListener('alpine:init', () => {
             const body_str=JSON.stringify(body_copy,null,2);
 
             // console.log("acquisition start body:",body_str);
-            return fetch("http://localhost:5002/api/acquisition/start", {
+            return fetch(`${this.server_url}/api/acquisition/start`, {
                 method: "POST",
                 body: body_str,
                 headers: [
@@ -584,7 +784,7 @@ document.addEventListener('alpine:init', () => {
          */
         async acquisition_stop(body){
             try{
-                return fetch("http://localhost:5002/api/acquisition/cancel", {
+                return fetch(`${this.server_url}/api/acquisition/cancel`, {
                     method: "POST",
                     body: JSON.stringify(body),
                     headers: [
@@ -609,7 +809,7 @@ document.addEventListener('alpine:init', () => {
          * @returns {Promise<AcquisitionStatusResponse>}
          */
         async acquisition_status(body){
-            return fetch("http://localhost:5002/api/acquisition/status", {
+            return fetch(`${this.server_url}/api/acquisition/status`, {
                 method: "POST",
                 body: JSON.stringify(body),
                 headers: [
@@ -621,235 +821,236 @@ document.addEventListener('alpine:init', () => {
                 return check(v);
             });
         },
+            
+        get Actions(){
+            return {
+                /**
+                 * rpc to /api/action/move_by
+                 * @param {MoveByRequest} body
+                 * @returns {Promise<MoveByResult>}
+                 */
+                moveBy:(body)=>{
+                    return fetch(`${this.server_url}/api/action/move_by`, {
+                        method: "POST",
+                        body: JSON.stringify(body),
+                        headers: [
+                            ["Content-Type", "application/json"]
+                        ]
+                    }).then(v=>{
+                        /** @ts-ignore @type {CheckMapSquidRequestFn<MoveByResult,InternalErrorModel>} */
+                        const check=checkMapSquidRequest;
+                        return check(v);
+                    });
+                },
 
-        Actions: {
-            /**
-             * rpc to /api/action/move_by
-             * @param {MoveByRequest} body
-             * @returns {Promise<MoveByResult>}
-             */
-            moveBy(body) {
-                return fetch("http://localhost:5002/api/action/move_by", {
-                    method: "POST",
-                    body: JSON.stringify(body),
-                    headers: [
-                        ["Content-Type", "application/json"]
-                    ]
-                }).then(v=>{
-                    /** @ts-ignore @type {CheckMapSquidRequestFn<MoveByResult,InternalErrorModel>} */
-                    const check=checkMapSquidRequest;
-                    return check(v);
-                });
-            },
+                /**
+                 * rpc to /api/action/move_to
+                 * @param {MoveToRequest} body
+                 * @returns {Promise<MoveToResult>}
+                 */
+                moveTo:(body)=>{
+                    return fetch(`${this.server_url}/api/action/move_to`, {
+                        method: "POST",
+                        body: JSON.stringify(body),
+                        headers: [
+                            ["Content-Type", "application/json"]
+                        ]
+                    }).then(v=>{
+                        /** @ts-ignore @type {CheckMapSquidRequestFn<MoveToResult,InternalErrorModel>} */
+                        const check=checkMapSquidRequest;
+                        return check(v);
+                    });
+                },
 
-            /**
-             * rpc to /api/action/move_to
-             * @param {MoveToRequest} body
-             * @returns {Promise<MoveToResult>}
-             */
-            moveTo(body) {
-                return fetch("http://localhost:5002/api/action/move_to", {
-                    method: "POST",
-                    body: JSON.stringify(body),
-                    headers: [
-                        ["Content-Type", "application/json"]
-                    ]
-                }).then(v=>{
-                    /** @ts-ignore @type {CheckMapSquidRequestFn<MoveToResult,InternalErrorModel>} */
-                    const check=checkMapSquidRequest;
-                    return check(v);
-                });
-            },
+                /**
+                 * 
+                 * @param {MoveToWellRequest} body
+                 * @returns {Promise<MoveToWellResponse>}
+                 */
+                moveToWell:(body)=>{
+                    return fetch(`${this.server_url}/api/action/move_to_well`, {
+                        method: "POST",
+                        body: JSON.stringify(body),
+                        headers: [
+                            ["Content-Type", "application/json"]
+                        ]
+                    }).then(v=>{
+                        /** @ts-ignore @type {CheckMapSquidRequestFn<MoveToWellResponse,InternalErrorModel>} */
+                        const check=checkMapSquidRequest;
+                        return check(v);
+                    });
+                },
 
-            /**
-             * 
-             * @param {MoveToWellRequest} body
-             * @returns {Promise<MoveToWellResponse>}
-             */
-            moveToWell(body) {
-                return fetch("http://localhost:5002/api/action/move_to_well", {
-                    method: "POST",
-                    body: JSON.stringify(body),
-                    headers: [
-                        ["Content-Type", "application/json"]
-                    ]
-                }).then(v=>{
-                    /** @ts-ignore @type {CheckMapSquidRequestFn<MoveToWellResponse,InternalErrorModel>} */
-                    const check=checkMapSquidRequest;
-                    return check(v);
-                });
-            },
+                /**
+                 * 
+                 * @param {ChannelSnapshotRequest} body 
+                 * @returns {Promise<ChannelSnapshotResponse>}
+                 */
+                snapChannel:(body)=>{
+                    return fetch(`${this.server_url}/api/action/snap_channel`, {
+                        method: "POST",
+                        body: JSON.stringify(body),
+                        headers: [
+                            ["Content-Type", "application/json"]
+                        ]
+                    }).then(v=>{
+                        /** @ts-ignore @type {CheckMapSquidRequestFn<ChannelSnapshotResponse,InternalErrorModel>} */
+                        const check=checkMapSquidRequest;
+                        return check(v);
+                    });
+                },
 
-            /**
-             * 
-             * @param {ChannelSnapshotRequest} body 
-             * @returns {Promise<ChannelSnapshotResponse>}
-             */
-            snapChannel(body) {
-                return fetch("http://localhost:5002/api/action/snap_channel", {
-                    method: "POST",
-                    body: JSON.stringify(body),
-                    headers: [
-                        ["Content-Type", "application/json"]
-                    ]
-                }).then(v=>{
-                    /** @ts-ignore @type {CheckMapSquidRequestFn<ChannelSnapshotResponse,InternalErrorModel>} */
-                    const check=checkMapSquidRequest;
-                    return check(v);
-                });
-            },
-
-            /**
-             * 
-             * @returns {Promise<EnterLoadingPositionResponse>}
-             */
-            enterLoadingPosition() {
-                return fetch("http://localhost:5002/api/action/enter_loading_position", {
-                    method: "POST",
-                    body: "{}",
-                    headers: [
-                        ["Content-Type", "application/json"]
-                    ]
-                }).then(v=>{
-                    /** @ts-ignore @type {CheckMapSquidRequestFn<EnterLoadingPositionResponse,InternalErrorModel>} */
-                    const check=checkMapSquidRequest;
-                    return check(v);
-                });
-            },
-            /**
-             * 
-             * @returns {Promise<LeaveLoadingPositionResponse>}
-             */
-            leaveLoadingPosition() {
-                return fetch("http://localhost:5002/api/action/leave_loading_position", {
-                    method: "POST",
-                    body: "{}",
-                    headers: [
-                        ["Content-Type", "application/json"]
-                    ]
-                }).then(v=>{
-                    /** @ts-ignore @type {CheckMapSquidRequestFn<LeaveLoadingPositionResponse,InternalErrorModel>} */
-                    const check=checkMapSquidRequest;
-                    return check(v);
-                });
-            },
-            /**
-             * @param {StreamBeginRequest} body
-             * @returns {Promise<StreamingStartedResponse>}
-             */
-            streamBegin(body) {
-                return fetch("http://localhost:5002/api/action/stream_channel_begin", {
-                    method: "POST",
-                    body: JSON.stringify(body),
-                    headers: [
-                        ["Content-Type", "application/json"]
-                    ]
-                }).then(v=>{
-                    /** @ts-ignore @type {CheckMapSquidRequestFn<StreamingStartedResponse,InternalErrorModel>} */
-                    const check=checkMapSquidRequest;
-                    return check(v);
-                });
-            },
-            /**
-             * @param {StreamEndRequest} body
-             * @returns {Promise<StreamEndResponse>}
-             */
-            streamEnd(body) {
-                return fetch("http://localhost:5002/api/action/stream_channel_end", {
-                    method: "POST",
-                    body: JSON.stringify(body),
-                    headers: [
-                        ["Content-Type", "application/json"]
-                    ]
-                }).then(v=>{
-                    /** @ts-ignore @type {CheckMapSquidRequestFn<StreamEndResponse,InternalErrorModel>} */
-                    const check=checkMapSquidRequest;
-                    return check(v);
-                });
-            },
-
-            /**
-             * 
-             * @param {LaserAutofocusCalibrateRequest} body 
-             * @returns {Promise<LaserAutofocusCalibrateResponse>}
-             */
-            laserAutofocusCalibrate(body){
-                return fetch("http://localhost:5002/api/action/laser_autofocus_calibrate", {
-                    method: "POST",
-                    body: JSON.stringify(body),
-                    headers: [
-                        ["Content-Type", "application/json"]
-                    ]
-                }).then(v=>{
-                    /** @ts-ignore @type {CheckMapSquidRequestFn<LaserAutofocusCalibrateResponse,InternalErrorModel>} */
-                    const check=checkMapSquidRequest;
-                    return check(v);
-                }).then(v => {
-                    console.log(v);
-                    return v;
-                });
-            },
-            /**
-             * 
-             * @param {LaserAutofocusMoveToTargetOffsetRequest} body 
-             * @returns {Promise<LaserAutofocusMoveToTargetOffsetResponse>}
-             */
-            laserAutofocusMoveToTargetOffset(body){
-                return fetch("http://localhost:5002/api/action/laser_autofocus_move_to_target_offset", {
-                    method: "POST",
-                    body: JSON.stringify(body),
-                    headers: [
-                        ["Content-Type", "application/json"]
-                    ]
-                }).then(v=>{
-                    /** @ts-ignore @type {CheckMapSquidRequestFn<LaserAutofocusMoveToTargetOffsetResponse,InternalErrorModel>} */
-                    const check=checkMapSquidRequest;
-                    return check(v);
-                }).then(v => {
-                    console.log(v);
-                    return v;
-                });
-            },
-            /**
-             * 
-             * @param {LaserAutofocusMeasureDisplacementRequest} body 
-             * @returns {Promise<LaserAutofocusMeasureDisplacementResponse>}
-             */
-            laserAutofocusMeasureDisplacement(body){
-                return fetch("http://localhost:5002/api/action/laser_autofocus_measure_displacement", {
-                    method: "POST",
-                    body: JSON.stringify(body),
-                    headers: [
-                        ["Content-Type", "application/json"]
-                    ]
-                }).then(v=>{
-                    /** @ts-ignore @type {CheckMapSquidRequestFn<LaserAutofocusMeasureDisplacementResponse,InternalErrorModel>} */
-                    const check=checkMapSquidRequest;
-                    return check(v);
-                }).then(v => {
-                    return v;
-                });
-            },
-            /**
-             * 
-             * @param {LaserAutofocusSnapRequest} body 
-             * @returns {Promise<LaserAutofocusSnapResponse>}
-             */
-            laserAutofocusSnap(body){
-                return fetch("http://localhost:5002/api/action/snap_reflection_autofocus", {
-                    method: "POST",
-                    body: JSON.stringify(body),
-                    headers: [
-                        ["Content-Type", "application/json"]
-                    ]
-                }).then(v=>{
-                    /** @ts-ignore @type {CheckMapSquidRequestFn<LaserAutofocusSnapResponse,InternalErrorModel>} */
-                    const check=checkMapSquidRequest;
-                    return check(v);
-                }).then(v => {
-                    return v;
-                });
-            },
+                /**
+                 * 
+                 * @returns {Promise<EnterLoadingPositionResponse>}
+                 */
+                enterLoadingPosition:()=>{
+                    return fetch(`${this.server_url}/api/action/enter_loading_position`, {
+                        method: "POST",
+                        body: "{}",
+                        headers: [
+                            ["Content-Type", "application/json"]
+                        ]
+                    }).then(v=>{
+                        /** @ts-ignore @type {CheckMapSquidRequestFn<EnterLoadingPositionResponse,InternalErrorModel>} */
+                        const check=checkMapSquidRequest;
+                        return check(v);
+                    });
+                },
+                /**
+                 * 
+                 * @returns {Promise<LeaveLoadingPositionResponse>}
+                 */
+                leaveLoadingPosition:()=>{
+                    return fetch(`${this.server_url}/api/action/leave_loading_position`, {
+                        method: "POST",
+                        body: "{}",
+                        headers: [
+                            ["Content-Type", "application/json"]
+                        ]
+                    }).then(v=>{
+                        /** @ts-ignore @type {CheckMapSquidRequestFn<LeaveLoadingPositionResponse,InternalErrorModel>} */
+                        const check=checkMapSquidRequest;
+                        return check(v);
+                    });
+                },
+                /**
+                 * @param {StreamBeginRequest} body
+                 * @returns {Promise<StreamingStartedResponse>}
+                 */
+                streamBegin:(body)=>{
+                    return fetch(`${this.server_url}/api/action/stream_channel_begin`, {
+                        method: "POST",
+                        body: JSON.stringify(body),
+                        headers: [
+                            ["Content-Type", "application/json"]
+                        ]
+                    }).then(v=>{
+                        /** @ts-ignore @type {CheckMapSquidRequestFn<StreamingStartedResponse,InternalErrorModel>} */
+                        const check=checkMapSquidRequest;
+                        return check(v);
+                    });
+                },
+                /**
+                 * @param {StreamEndRequest} body
+                 * @returns {Promise<StreamEndResponse>}
+                 */
+                streamEnd:(body)=>{
+                    return fetch(`${this.server_url}/api/action/stream_channel_end`, {
+                        method: "POST",
+                        body: JSON.stringify(body),
+                        headers: [
+                            ["Content-Type", "application/json"]
+                        ]
+                    }).then(v=>{
+                        /** @ts-ignore @type {CheckMapSquidRequestFn<StreamEndResponse,InternalErrorModel>} */
+                        const check=checkMapSquidRequest;
+                        return check(v);
+                    });
+                },
+                /**
+                 * 
+                 * @param {LaserAutofocusCalibrateRequest} body 
+                 * @returns {Promise<LaserAutofocusCalibrateResponse>}
+                 */
+                laserAutofocusCalibrate:(body)=>{
+                    return fetch(`${this.server_url}/api/action/laser_autofocus_calibrate`, {
+                        method: "POST",
+                        body: JSON.stringify(body),
+                        headers: [
+                            ["Content-Type", "application/json"]
+                        ]
+                    }).then(v=>{
+                        /** @ts-ignore @type {CheckMapSquidRequestFn<LaserAutofocusCalibrateResponse,InternalErrorModel>} */
+                        const check=checkMapSquidRequest;
+                        return check(v);
+                    }).then(v => {
+                        console.log(v);
+                        return v;
+                    });
+                },
+                /**
+                 * 
+                 * @param {LaserAutofocusMoveToTargetOffsetRequest} body 
+                 * @returns {Promise<LaserAutofocusMoveToTargetOffsetResponse>}
+                 */
+                laserAutofocusMoveToTargetOffset:(body)=>{
+                    return fetch(`${this.server_url}/api/action/laser_autofocus_move_to_target_offset`, {
+                        method: "POST",
+                        body: JSON.stringify(body),
+                        headers: [
+                            ["Content-Type", "application/json"]
+                        ]
+                    }).then(v=>{
+                        /** @ts-ignore @type {CheckMapSquidRequestFn<LaserAutofocusMoveToTargetOffsetResponse,InternalErrorModel>} */
+                        const check=checkMapSquidRequest;
+                        return check(v);
+                    }).then(v => {
+                        console.log(v);
+                        return v;
+                    });
+                },
+                /**
+                 * 
+                 * @param {LaserAutofocusMeasureDisplacementRequest} body 
+                 * @returns {Promise<LaserAutofocusMeasureDisplacementResponse>}
+                 */
+                laserAutofocusMeasureDisplacement:(body)=>{
+                    return fetch(`${this.server_url}/api/action/laser_autofocus_measure_displacement`, {
+                        method: "POST",
+                        body: JSON.stringify(body),
+                        headers: [
+                            ["Content-Type", "application/json"]
+                        ]
+                    }).then(v=>{
+                        /** @ts-ignore @type {CheckMapSquidRequestFn<LaserAutofocusMeasureDisplacementResponse,InternalErrorModel>} */
+                        const check=checkMapSquidRequest;
+                        return check(v);
+                    }).then(v => {
+                        return v;
+                    });
+                },
+                /**
+                 * 
+                 * @param {LaserAutofocusSnapRequest} body 
+                 * @returns {Promise<LaserAutofocusSnapResponse>}
+                 */
+                laserAutofocusSnap:(body)=>{
+                    return fetch(`${this.server_url}/api/action/snap_reflection_autofocus`, {
+                        method: "POST",
+                        body: JSON.stringify(body),
+                        headers: [
+                            ["Content-Type", "application/json"]
+                        ]
+                    }).then(v=>{
+                        /** @ts-ignore @type {CheckMapSquidRequestFn<LaserAutofocusSnapResponse,InternalErrorModel>} */
+                        const check=checkMapSquidRequest;
+                        return check(v);
+                    }).then(v => {
+                        return v;
+                    });
+                },
+            }
         },
 
         /** @type {number} */
@@ -900,7 +1101,7 @@ document.addEventListener('alpine:init', () => {
                 channel: target_channel,
             }
 
-            return fetch("http://localhost:5002/api/action/stream_channel_begin", {
+            return fetch(`${this.server_url}/api/action/stream_channel_begin`, {
                 method: "POST",
                 body: JSON.stringify(body),
                 headers: [
@@ -929,7 +1130,7 @@ document.addEventListener('alpine:init', () => {
                 channel: target_channel,
             }
 
-            return fetch("http://localhost:5002/api/action/stream_channel_end", {
+            return fetch(`${this.server_url}/api/action/stream_channel_end`, {
                 method: "POST",
                 body: JSON.stringify(body),
                 headers: [
