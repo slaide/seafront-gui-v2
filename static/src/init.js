@@ -94,7 +94,7 @@ document.addEventListener('alpine:init', () => {
          * @returns {Promise<HardwareCapabilities>}
          */
         async getHardwareCapabilities() {
-            const plateinfo=await fetch("http://localhost:5002/api/get_features/hardware_capabilities",{
+            const plateinfo=await fetch(`${this.server_url}/api/get_features/hardware_capabilities`,{
                 method:"POST",
                 body:"{}",
                 headers: [
@@ -112,7 +112,7 @@ document.addEventListener('alpine:init', () => {
          * @returns {Promise<MachineDefaults>}
          */
         async getMachineDefaults(){
-            const machinedefaults=await fetch("http://localhost:5002/api/get_features/machine_defaults",{
+            const machinedefaults=await fetch(`${this.server_url}/api/get_features/machine_defaults`,{
                 method:"POST",
                 body:"{}",
                 headers: [
@@ -132,7 +132,7 @@ document.addEventListener('alpine:init', () => {
          * @returns {Promise<ConfigListResponse>}
          */
         async getConfigList(){
-            const configlist=await fetch("http://localhost:5002/api/acquisition/config_list",{
+            const configlist=await fetch(`${this.server_url}/api/acquisition/config_list`,{
                 method:"POST",
                 body:"{}",
                 headers: [
@@ -152,7 +152,7 @@ document.addEventListener('alpine:init', () => {
          * @returns {Promise<StoreConfigResponse>}
          */
         async storeConfig(body){
-            const response=await fetch("http://localhost:5002/api/acquisition/config_store",{
+            const response=await fetch(`${this.server_url}/api/acquisition/config_store`,{
                 method:"POST",
                 body:JSON.stringify(body),
                 headers: [
@@ -172,7 +172,7 @@ document.addEventListener('alpine:init', () => {
          * @returns {Promise<LoadConfigResponse>}
          */
         async loadConfig(body){
-            const response=await fetch("http://localhost:5002/api/acquisition/config_fetch",{
+            const response=await fetch(`${this.server_url}/api/acquisition/config_fetch`,{
                 method:"POST",
                 body:JSON.stringify(body),
                 headers: [
