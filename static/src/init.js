@@ -16,7 +16,7 @@ Object.assign(window, { registerNumberInput });
 
 import { ChannelImageView } from "channelview";
 
-import { enabletooltip } from "tooltip";
+import { tooltipConfig, enabletooltip } from "tooltip";
 Object.assign(window, { enabletooltip });
 
 import { initTabs } from "tabs";
@@ -89,6 +89,24 @@ Object.assign(window,{checkMapSquidRequest});
 document.addEventListener('alpine:init', () => {
     Alpine.data('microscope_state', () => ({
         server_url:"http://127.0.0.1:5002",
+
+        tooltipConfig,
+
+        themes:["light","dark"],
+        theme:"light",
+        changeTheme(){
+            // apply theme to document body
+            const el=document.body;
+
+            // remove existing theme
+            const existing_theme_class=Array.from(el.classList).find(c=>c.startsWith('theme-'));
+            if(existing_theme_class!==undefined){
+                el.classList.remove(existing_theme_class);
+            }
+
+            // apply new theme
+            el.classList.add(`theme-${this.theme}`);
+        },
 
         /**
          * @returns {Promise<HardwareCapabilities>}
@@ -593,7 +611,7 @@ document.addEventListener('alpine:init', () => {
                 }
             };
 
-            function getstate_loop() {
+            const getstate_loop=()=>{
                 try {
                     if (!ws.ws || ws.ws.readyState == WebSocket.CLOSED) {
                         // trigger catch clause which will reconnect

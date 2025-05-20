@@ -10,6 +10,9 @@
     width:100%;
     overflow:hidden;
 
+    --tabs-header-border-color:black;
+    --tabs-header-bg-color:lightgrey;
+
     .tabbar {
         display: grid;
 
@@ -25,7 +28,7 @@
         --border-size: 1px;
 
         .tabheader.active {
-            border: var(--border-size) solid black;
+            border: var(--border-size) solid var(--tabs-header-border-color);
         }
 
         .tabheader {
@@ -33,7 +36,7 @@
             cursor: pointer;
 
             padding: 0.1em 0.6em;
-            background: lightgrey;
+            background: var(--tabs-header-bg-color);
 
             border-radius: 0.5em 0.5em 0 0;
 
@@ -41,7 +44,7 @@
             border: var(--border-size) solid transparent;
         }
 
-        border-bottom: 1px solid black;
+        border-bottom: 1px solid var(--tabs-header-border-color);
     }
 
     .tab{

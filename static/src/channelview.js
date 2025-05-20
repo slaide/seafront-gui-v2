@@ -18,9 +18,8 @@ export class ChannelImageView {
         renderer.setPixelRatio(window.devicePixelRatio) // enable ssaa by *1.5 (bad for performance)
         this.renderer = renderer
 
-        // setRGB(r,g,b) or setHex(int)
-        // set to whatever color, and set opacity to zero (i.e. transparent, to ignore color and show whatever is behind it)
-        renderer.setClearColor(new THREE.Color().setRGB(1, 1, 1), 1);
+        // set clear color based on theme color
+        this.setClearColorFromBody();
 
         /** @type {SceneInfo[]} */
         this.sceneInfos = []
@@ -51,6 +50,11 @@ export class ChannelImageView {
         observer.observe(renderer.domElement);
 
         this.draw()
+    }
+
+    setClearColorFromBody(){
+        const themeBgColor=document.body.computedStyleMap().get("--text-color")?.toString();
+        this.renderer.setClearColor(new THREE.Color(themeBgColor??'rgb(255,255,255)'), 1);
     }
 
     /**

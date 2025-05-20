@@ -1,6 +1,8 @@
 .tooltip {
     border-radius: 0.3em;
-    background: rgb(254, 254, 144);
+    --tooltip-bgcolor:rgb(254, 254, 144);
+    --tooltip-boxshadow:rgba(54, 54, 54, 0.62);
+    background: var(--tooltip-bgcolor);
     position: absolute;
     padding: 0.5em 1em;
     box-shadow:
@@ -11,5 +13,5 @@
         /*blur radius*/
         0.6em
         /*extension length from center on every edge*/
-        0.6em rgba(54, 54, 54, 0.62);
+        0.6em var(--tooltip-boxshadow);
 }

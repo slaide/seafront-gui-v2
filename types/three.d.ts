@@ -1,7 +1,11 @@
 declare module "three" {
+    /** [doc](https://threejs.org/docs/#api/en/math/Color) */
     class Color {
         constructor();
+        constructor(cssColor:string);
+        constructor(hexCode:number);
         setRGB(r: number, g: number, b: number): Color;
+        setHex(hex: number): Color;
     }
 
     class Renderer {

@@ -1,6 +1,12 @@
 "use strict";
 
 const TIME_TO_TOOLTIP_POPUP_MS = 400;
+
+/** indicate if tooltip popups should be used */
+export const tooltipConfig={
+    enabled:true
+};
+
 /**
  * @param {HTMLElement} el
  */
@@ -99,7 +105,9 @@ export function enabletooltip(el) {
      * @param {MouseEvent} event
      * */
     function starttimer(event) {
-        el.addEventListener("mouseleave", stoptooltip)
-        timer = setTimeout(showtooltip, TIME_TO_TOOLTIP_POPUP_MS)
+        if(!tooltipConfig.enabled)return;
+
+        el.addEventListener("mouseleave", stoptooltip);
+        timer = setTimeout(showtooltip, TIME_TO_TOOLTIP_POPUP_MS);
     }
 }

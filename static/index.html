@@ -3,19 +3,12 @@
 
 <head>
 	<meta charset="utf-8">
-	<title>Seafront GUI v2</title>
-	<style>
-		body {
-			margin: 0;
-			padding: 0;
-			border: 0;
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta name="theme-color" content="#317EFB">
 
-			label {
-				height: min-content;
-				width: max-content;
-			}
-		}
-	</style>
+	<title>Seafront GUI v2</title>
+	
+	<link rel="stylesheet" href="/styles/reset.css">
 	<!-- importing plotly as module fails, so we do this instead -->
 	<script src="https://cdn.jsdelivr.net/npm/plotly.js@3.0/dist/plotly.min.js"></script>
 	<script type="importmap">
@@ -72,6 +65,84 @@
 		body{
 			font-size:0.9em;
 			font-family:Arial, Helvetica, sans-serif;
+
+			background:var(--strong-bg-color);
+			color:var(--text-color);
+			input,select,textarea{
+				background:var(--strong-bg-color);
+				color:var(--text-color);
+				border:1px solid var(--text-color);
+				border-radius:0.3em;
+			}
+			input::placeholder,textarea::placeholder{
+				font-style:italic;
+				color:var(--text-color);
+			}
+			input:not([type=checkbox]):not([disabled]),textarea:not([disabled]){
+				background:var(--strong-bg-color);
+				color:var(--text-color);
+				cursor:text;
+			}
+			input[type=checkbox]:not([disabled]),select:not([disabled]){
+				background:var(--strong-bg-color);
+				color:var(--text-color);
+				cursor:pointer;
+			}
+			input[disabled],select[disabled],textarea[disabled]{
+				background:var(--weak-bg-color);
+				color:var(--text-color);
+				cursor:not-allowed;
+			}
+			button{
+				background:var(--weak-bg-color);
+				color:var(--text-color);
+				border:1px solid var(--text-color);
+				border-radius:0.4em;
+				cursor:pointer;
+			}
+			button:hover{
+				background:var(--strong-bg-color);
+				font-style: italic;
+			}
+
+			.tabs{
+				--tabs-header-border-color:var(--text-color);
+				/*--tabs-header-bg-color:lightgrey;*/
+			}
+
+			scrollbar-color: var(--scrollbar-innercolor) var(--scrollbar-outercolor);
+		}
+		body.theme-light{
+			.tooltip{
+				--tooltip-bgcolor:rgb(254, 254, 144);
+				--tooltip-boxshadow:rgba(54, 54, 54, 0.62);
+			}
+			.tabs{
+				--tabs-header-bg-color:lightgrey;
+			}
+
+			--scrollbar-innercolor:var(--text-color);
+			--scrollbar-outercolor:var(--strong-bg-color);
+
+			--strong-bg-color:rgb(246, 246, 246);
+			--weak-bg-color:rgb(222, 222, 222);
+			--text-color:black;
+		}
+		body.theme-dark{
+			.tooltip{
+				--tooltip-bgcolor:rgb(197, 156, 43);
+				--tooltip-boxshadow:rgba(207, 207, 207, 0.62);
+			}
+			.tabs{
+				--tabs-header-bg-color:rgb(101, 101, 101);
+			}
+
+			--scrollbar-innercolor:var(--text-color);
+			--scrollbar-outercolor:var(--strong-bg-color);
+
+			--strong-bg-color:black;
+			--weak-bg-color:rgb(54, 54, 54);
+			--text-color:rgb(236, 236, 236);
 		}
 	</style>
 
@@ -90,8 +161,8 @@
 
 					display: grid;
 					grid-template:
-						"a b" auto
-						"f f" 2em
+						"a b" 1fr
+						"f f" auto
 						/ 2fr 1fr;
 
 					#leftcol,
@@ -136,7 +207,7 @@
 								min=1 max=4 step=1 x-model="channelViewNumCols"
 								x-init="registerNumberInput($el)">
 						</div>
-						<canvas id="c" x-init="await initChannelView($el)"></canvas>
+						<canvas id="c" x-init="await initChannelView($el);$watch('theme',()=>view.setClearColorFromBody())"></canvas>
 						<style>
 							#c {
 								position: fixed;
@@ -158,6 +229,7 @@
 
 								.channel-box-image {
 									aspect-ratio: 1;
+									border:1px solid lightblue;
 								}
 							}
 						</style>
@@ -167,8 +239,7 @@
 								<div class="channel-box" x-bind:channelhandle="channel.handle">
 									<div x-bind:id="`channel-display-${channel.handle}`" x-text="channel.name"></div>
 									<div x-effect="updateChannelCache($el)" class="channel-box-image"
-										x-bind:id="`channelview-item-${channel.handle}`"
-										style="border:1em white;"></div>
+										x-bind:id="`channelview-item-${channel.handle}`"></div>
 								</div>
 							</template>
 						</div>
@@ -739,12 +810,18 @@
 					#bottom-bar{
 						border-top:1px solid black;
 						grid-area: f;
+
+						display:grid;
+						grid-template:
+							  "server-label     server-text     connection-indicator other-top" 1fr
+							  "microscope-label microscope-text connection-indicator other-bottom" 1fr
+							/  min-content      20em             auto                 auto;
 					}
 				</style>
-				<label>server</label>
-				<input type="text" x-model="server_url">
+				<label style="grid-area:server-label;">Server:</label>
+				<input style="grid-area:server-text;" type="text" x-model="server_url">
 
-				<div x-bind:class="`connection-indicator ${isConnectedToServer?'connected':''}`"
+				<div style="grid-area:connection-indicator;" x-bind:class="`connection-indicator ${isConnectedToServer?'connected':''}`"
 					x-bind:tooltip="`this web interface ${isConnectedToServer?'is':'is NOT'} currently connected to the server at ${server_url} `"
 					x-init="enabletooltip($el)"
 					>&nbsp;</div>
@@ -763,8 +840,28 @@
 					}
 				</style>
 
-				<label>microscope</label>
-				<span x-text="getMachineConfigItem('microscope_name')?.value??'(none)'"></span>
+				<label style="grid-area:microscope-label;">Microscope:</label>
+				<span  style="grid-area:microscope-text;" x-text="getMachineConfigItem('microscope_name')?.value??'(none)'"></span>
+
+				<div style="grid-area:other-top;">
+					<label>tooltips enabled?</label>
+					<input type="checkbox" x-model="tooltipConfig.enabled">
+				</div>
+
+				<div style="grid-area:other-bottom;">
+					<label>theme</label>
+					<select
+						x-model="theme"
+						x-init="$nextTick(()=>{
+							console.log(`current theme is ${theme}`)
+							changeTheme()
+						})"
+						x-on:change="changeTheme($el,$event)">
+						<template x-for="themeoption in themes">
+							<option x-bind:value="themeoption" x-text="themeoption"></option>
+						</template>
+					</select>
+				</div>
 			</div>
 		</div>
 	</template>
