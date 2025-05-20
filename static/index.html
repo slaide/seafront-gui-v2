@@ -330,7 +330,14 @@
 										<td x-text="protocol.timestamp"></td>
 										<td x-text="protocol.comment"></td>
 										<td x-text="protocol.cell_line"></td>
-										<td x-text="protocol.plate_type.handle"></td>
+										<td
+											x-init="enabletooltip($el)"
+											x-bind:tooltip="`
+												Manufacturer: ${protocol.plate_type.Manufacturer}
+												Model Name: ${protocol.plate_type.Model_name}
+												Model ID: ${protocol.plate_type.Model_id}
+											`.trimLeft().replaceAll('\n','<br>')"
+											x-text="protocol.plate_type.Model_id"></td>
 									</tr>
 								</template>
 							</table>
