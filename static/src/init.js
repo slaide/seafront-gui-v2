@@ -553,6 +553,86 @@ document.addEventListener('alpine:init', () => {
         /** indicate of connection to server is currently established */
         isConnectedToServer:false,
 
+        // initiate async websocket event loop to update
+        /** @type {WebSocket|null} */
+        status_ws: null,
+        server_url_input:"",
+        /**
+         * 
+         * @param {string?} url
+         * @returns 
+         */
+        status_reconnect(url){
+            // if new url is same one, and a connection is already [in process of] being established
+            // skip reconnect attempt.
+            if(url==this.server_url && this.status_ws!=null){
+                return;
+            }
+
+            // if no url has been provided, reconnect to existing url.
+            // if one has been provided, update current url and proceed.
+            if(url){
+                this.server_url=url;
+            }
+
+            // reconnection is only attempted if connection is not currently established
+            this.isConnectedToServer=false;
+
+            try{
+                // ensure old websocket handle is closed
+                if (this.status_ws != null && this.status_ws.readyState != WebSocket.CLOSED) {
+                    this.isConnectedToServer=false;
+
+                    this.status_ws.close();
+                }
+
+                // try reconnecting (may fail if server is closed, in which case just try reconnecting later)
+                this.status_ws = new WebSocket(`${this.server_url}/ws/get_info/current_state`);
+                this.status_ws.onmessage = async ev => {
+                    const data = JSON.parse(JSON.parse(ev.data));
+                    await this.updateMicroscopeStatus(data);
+                    
+                    // if we got this far, the connection to the server is established
+                    this.isConnectedToServer=true;
+
+                    requestAnimationFrame(()=>this.status_getstate_loop());
+                };
+                this.status_ws.onerror = ev => {
+                    this.isConnectedToServer=false;
+
+                    // wait a short time before attempting to reconnect
+                    setTimeout(this.status_reconnect, 200);
+                };
+                this.status_ws.onopen = ev => requestAnimationFrame(()=>this.status_getstate_loop());
+            }catch(e){
+                this.isConnectedToServer=false;
+
+                console.warn(`websocket error: ${e}`);
+                setTimeout(this.status_reconnect, 200);
+            }
+        },
+
+        status_getstate_loop(){
+            try {
+                if (!this.status_ws || this.status_ws.readyState == WebSocket.CLOSED) {
+                    // trigger catch clause which will reconnect
+                    throw "websocket is closed!";
+                } else if (this.status_ws.readyState == WebSocket.OPEN) {
+                    // send arbitrary message to receive status update
+                    this.status_ws.send("info");
+                } else {
+                    // console.log(ws.ws.readyState, WebSocket.CLOSED, WebSocket.CONNECTING, WebSocket.OPEN)
+                    // if websocket is not yet ready, try again later
+                    requestAnimationFrame(this.status_getstate_loop);
+                }
+            } catch (e) {
+                this.isConnectedToServer=false;
+
+                // wait a short time before attempting to reconnect
+                setTimeout(this.status_reconnect, 200);
+            }
+        },
+
         // this is an annoying workaround (in combination with initManual) because
         // alpine does not actually await an async init before mounting the element.
         // which leads to a whole bunch of errors in the console and breaks
@@ -570,68 +650,7 @@ document.addEventListener('alpine:init', () => {
             const currentStateJson = await currentStateData.json();
             await this.updateMicroscopeStatus(currentStateJson);
 
-            // initiate async websocket event loop to update
-            /** @type {{ws?:WebSocket}} */
-            let ws = {}
-            const reconnect=()=>{
-                // reconnection is only attempted if connection is not currently established
-                this.isConnectedToServer=false;
-
-                try{
-                    // ensure old websocket handle is closed
-                    if (ws.ws != null && ws.ws.readyState != WebSocket.CLOSED) {
-                        this.isConnectedToServer=false;
-
-                        ws.ws.close();
-                    }
-
-                    // try reconnecting (may fail if server is closed, in which case just try reconnecting later)
-                    ws.ws = new WebSocket(`${this.server_url}/ws/get_info/current_state`);
-                    ws.ws.onmessage = async ev => {
-                        const data = JSON.parse(JSON.parse(ev.data));
-                        await this.updateMicroscopeStatus(data);
-                        
-                        // if we got this far, the connection to the server is established
-                        this.isConnectedToServer=true;
-
-                        requestAnimationFrame(getstate_loop);
-                    };
-                    ws.ws.onerror = ev => {
-                        this.isConnectedToServer=false;
-
-                        // wait a short time before attempting to reconnect
-                        setTimeout(() => reconnect(), 200);
-                    };
-                    ws.ws.onopen = ev => requestAnimationFrame(getstate_loop);
-                }catch(e){
-                    this.isConnectedToServer=false;
-
-                    console.warn(`websocket error: ${e}`);
-                    setTimeout(() => reconnect(), 200);
-                }
-            };
-
-            const getstate_loop=()=>{
-                try {
-                    if (!ws.ws || ws.ws.readyState == WebSocket.CLOSED) {
-                        // trigger catch clause which will reconnect
-                        throw "websocket is closed!";
-                    } else if (ws.ws.readyState == WebSocket.OPEN) {
-                        // send arbitrary message to receive status update
-                        ws.ws.send("info");
-                    } else {
-                        // console.log(ws.ws.readyState, WebSocket.CLOSED, WebSocket.CONNECTING, WebSocket.OPEN)
-                        // if websocket is not yet ready, try again later
-                        requestAnimationFrame(getstate_loop);
-                    }
-                } catch (e) {
-                    this.isConnectedToServer=false;
-
-                    // wait a short time before attempting to reconnect
-                    setTimeout(() => reconnect(), 200);
-                }
-            }
-            getstate_loop();
+            this.status_getstate_loop();
         },
 
         /**

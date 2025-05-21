@@ -826,7 +826,11 @@
 					}
 				</style>
 				<label style="grid-area:server-label;">Server:</label>
-				<input style="grid-area:server-text;" type="text" x-model="server_url">
+				<input style="grid-area:server-text;" type="text"
+					x-model="server_url_input"
+					x-on:keydown="(ev)=>{if(ev.key=='Enter'){$dispatch('blur')}}"
+					x-init="$nextTick(()=>{server_url_input=server_url;$dispatch('blur')})"
+					x-on:blur="status_reconnect(server_url_input)">
 
 				<div style="grid-area:connection-indicator;" x-bind:class="`connection-indicator ${isConnectedToServer?'connected':''}`"
 					x-bind:tooltip="`this web interface ${isConnectedToServer?'is':'is NOT'} currently connected to the server at ${server_url} `"
