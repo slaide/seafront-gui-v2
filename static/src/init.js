@@ -499,6 +499,13 @@ document.addEventListener('alpine:init', () => {
          */
         initPlateNavigator(el){
             this.plateNavigator=new PlateNavigator(el);
+
+            this.plateNavigator.cameraFit({
+                ax:0,
+                ay:0,
+                bx:this.microscope_config.wellplate_type.Length_mm,
+                by:this.microscope_config.wellplate_type.Width_mm,
+            })
         },
 
         /**
