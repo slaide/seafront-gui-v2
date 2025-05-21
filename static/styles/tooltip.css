@@ -15,3 +15,6 @@
         /*extension length from center on every edge*/
         0.6em var(--tooltip-boxshadow);
 }
+*[tooltip]{
+    cursor:help;
+}

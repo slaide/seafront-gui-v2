@@ -92,6 +92,15 @@ document.addEventListener('alpine:init', () => {
 
         tooltipConfig,
 
+        limits:{
+            imaging_exposure_time_ms:{min:0.1,step:0.1,max:936},
+            imaging_analog_gain_db:{min:0,step:0.1,max:24},
+            imaging_focus_offset_um:{min:-200,step:0.1,max:200},
+            imaging_illum_perc:{min:0,step:0.1,max:100},
+            imaging_number_z_planes:{min:1,step:2,max:999},
+            imaging_delta_z_um:{min:0.1,step:0.1,max:1000},
+        },
+
         themes:["light","dark"],
         theme:"light",
         changeTheme(){

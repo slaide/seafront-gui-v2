@@ -6,6 +6,30 @@ const TIME_TO_TOOLTIP_POPUP_MS = 400;
 export const tooltipConfig={
     enabled:true
 };
+/** @type {{currentTooltipElement:HTMLElement|null}} */
+const tooltip={
+    currentTooltipElement:null,
+};
+
+window.addEventListener("keydown",(ev)=>{
+    if(ev.key=="F1"){
+        // always prevent F1 input because its utterly useless
+        ev.preventDefault();
+
+        // check for an element to accept the input
+        const el=activeElement.el;
+        if(!el)return;
+
+        // activate element tooltip
+        elementShowtooltip.get(el)?.(el);
+    }
+});
+/** @type {{el?:HTMLElement}} */
+let activeElement={el:undefined};
+/** @type {WeakMap<HTMLElement,function(HTMLElement):void>} */
+const elementShowtooltip=new WeakMap();
+/** @type {WeakSet<HTMLElement>} */
+const elementStopTooltipRegistered=new WeakSet();
 
 /**
  * @param {HTMLElement} el
@@ -15,24 +39,70 @@ export function enabletooltip(el) {
     let timer = null;
     /** @type {MutationObserver?} */
     let observer = null;
-    /** tooltip element will be created on demand for this element @type {HTMLElement?} */
-    let tooltipelement = null;
 
-    el.addEventListener("mouseenter", starttimer);
+    el.addEventListener("mouseenter", ()=>starttimer());
+
+    // allow pressing f1 while element is focused or mouse is hovered
+    // to manually open tooltip, even when tooltips are disabled.
+    let focuscount=0;
+    el.addEventListener("focus",(ev)=>{
+        const el=ev.currentTarget;
+        if(!(el instanceof HTMLElement))return;
+        focuscount++;
+        if(focuscount==1){
+            activeElement.el=el;
+        }
+    })
+    el.addEventListener("mouseenter",(ev)=>{
+        const el=ev.currentTarget;
+        if(!(el instanceof HTMLElement))return;
+        focuscount++;
+        if(focuscount==1){
+            activeElement.el=el;
+        }
+    })
+    el.addEventListener("mouseleave",(ev)=>{
+        const el=ev.currentTarget;
+        focuscount--;
+        if(focuscount==0){
+            activeElement.el=undefined;
+        }
+    })
+    el.addEventListener("blur",(ev)=>{
+        const el=ev.currentTarget;
+        focuscount--;
+        if(focuscount==0){
+            activeElement.el=undefined;
+        }
+    })
+    elementShowtooltip.set(el,showtooltip);
 
     return;
 
-    /** create and display tooltip element */
-    function showtooltip() {
-        tooltipelement = document.createElement("div");
+    /**
+     * create and display tooltip element
+     * @param {HTMLElement?} overrideEl
+     */
+    function showtooltip(overrideEl) {
+        const targetel=overrideEl??el;
+
+        // if there is already an active element, ignore this
+        if(tooltip.currentTooltipElement)return;
+
+        if(!elementStopTooltipRegistered.has(targetel)){
+            elementStopTooltipRegistered.add(targetel);
+            targetel.addEventListener("mouseleave", stoptooltip);
+        }
+        
+        tooltip.currentTooltipElement = document.createElement("div");
         setTooltip();
-        tooltipelement.classList.add("tooltip");
-        document.body.appendChild(tooltipelement);
+        tooltip.currentTooltipElement.classList.add("tooltip");
+        document.body.appendChild(tooltip.currentTooltipElement);
 
         // bounding box of element it references
-        const elbb = el.getBoundingClientRect();
+        const elbb = targetel.getBoundingClientRect();
         // tooltip bounding box ( to measure width, height, and viewport edge clearance )
-        const ttbb = tooltipelement.getBoundingClientRect();
+        const ttbb = tooltip.currentTooltipElement.getBoundingClientRect();
 
         // initial position: top center of referenced element.
         let left = elbb.left + elbb.width / 2 - ttbb.width / 2;
@@ -49,11 +119,13 @@ export function enabletooltip(el) {
         left=Math.max(0,left);
         // if tooltip overflows out of the viewport to the top:
         // push back inside (to touch top border)
-        top=Math.max(0,top);
+        if(top<0){
+            top=elbb.bottom;
+        }
         // bottom overflow is not possible, since the tooltip is positioned at
         // the top center of the element it references.
 
-        tooltipelement.style = `left: ${left}px; top: ${top}px;`
+        tooltip.currentTooltipElement.style = `left: ${left}px; top: ${top}px;`
 
         // update tooltip if it changes while popup is active
         // (tooltip can be reactive attribute, so this is a valid use case)
@@ -64,7 +136,7 @@ export function enabletooltip(el) {
                 }
             }
         });
-        observer.observe(el, {
+        observer.observe(targetel, {
             attributes: true,               // watch for attribute changes
             attributeFilter: ['tooltip'],   // only fire for this attribute
             attributeOldValue: true         // include oldValue in the MutationRecord
@@ -76,18 +148,21 @@ export function enabletooltip(el) {
          * set tooltip to current value of tooltip attribute on element
          */
         function setTooltip(){
-            if(tooltipelement){
-                tooltipelement.innerHTML = el.getAttribute("tooltip")??"";
+            if(tooltip.currentTooltipElement){
+                tooltip.currentTooltipElement.innerHTML = targetel.getAttribute("tooltip")??"";
             }
         }
     }
     /** stop tooltip display */
     function stoptooltip() {
-        el.removeEventListener("mouseleave", stoptooltip);
+        const targetel=el;
 
-        if(tooltipelement){
-            tooltipelement.parentElement?.removeChild(tooltipelement);
-            tooltipelement = null;
+        elementStopTooltipRegistered.delete(targetel);
+        targetel.removeEventListener("mouseleave", stoptooltip);
+
+        if(tooltip.currentTooltipElement){
+            tooltip.currentTooltipElement.parentElement?.removeChild(tooltip.currentTooltipElement);
+            tooltip.currentTooltipElement = null;
         }
 
         if(observer){
@@ -102,12 +177,17 @@ export function enabletooltip(el) {
     }
     /**
      * initiate waiting to display tooltip timer
-     * @param {MouseEvent} event
-     * */
-    function starttimer(event) {
-        if(!tooltipConfig.enabled)return;
+     * @param {HTMLElement?} [newel=undefined]
+     */
+    function starttimer(newel) {
+        // if there is already an active element, ignore this
+        if(tooltip.currentTooltipElement)return;
 
-        el.addEventListener("mouseleave", stoptooltip);
+        if(!tooltipConfig.enabled)return;
+        const targetel=newel??el;
+
+        elementStopTooltipRegistered.add(targetel);
+        targetel.addEventListener("mouseleave", stoptooltip);
         timer = setTimeout(showtooltip, TIME_TO_TOOLTIP_POPUP_MS);
     }
 }

@@ -592,89 +592,160 @@
 							<style>
 								#channelgrid {
 									display: grid;
-									grid-template-columns: repeat(3, auto) 5em 5em 5em 5em 4em 7em;
+									grid-template-columns: repeat(3, max-content) 5em 5em 5em 5em 4em 7em;
 		
 									.channel-config-header{
 										text-align: center;
 									}
+
+									/* x padding here is present inside the row container, but y padding
+									is NOT, so y padding is added inside the row container instead*/
+									gap: 0 0.4em;
+
+									.channel-config-row-name{
+										font-weight: bold;
+										display:grid;
+										align-items: center;
+
+										background:var(--weak-bg-color);
+										padding-right:0.5em;
+										border-right:1px solid black;
+									}
 								}
 							</style>
 
+							<p class="channel-config-header"
+								x-init="enabletooltip($el)"
+								x-bind:tooltip="`
+									Indicates if the channel should be imaged during acqusition.
+
+									When checked, this channel will be imaged.
+								`.trimLeft().replaceAll('\n','<br>')">?</p>
+							<p class="channel-config-header channel-config-row-name">Channel</p>
 							<p class="channel-config-header"></p>
-							<p class="channel-config-header">Channel</p>
-							<p class="channel-config-header"></p>
-							<p class="channel-config-header">Exp. [ms]</p>
-							<p class="channel-config-header">Gain [dB]</p>
-							<p class="channel-config-header">Off. [um]</p>
-							<p class="channel-config-header">Pow. [%]</p>
-							<p class="channel-config-header">num z</p>
-							<p class="channel-config-header">delta z [um]</p>
+							<p class="channel-config-header"
+								x-init="enabletooltip($el)" x-bind:tooltip="`
+									exposure time in milliseconds.
+
+									range: ${limits.imaging_exposure_time_ms.min} - ${limits.imaging_exposure_time_ms.max} ( in steps of ${limits.imaging_exposure_time_ms.step})
+									`.trimLeft().replaceAll('\n','<br>')" >Exp. [ms]</p>
+							<p class="channel-config-header"
+								x-init="enabletooltip($el)"
+								x-bind:tooltip="`
+									analog gain in decibels.
+
+									range: ${limits.imaging_analog_gain_db.min} - ${limits.imaging_analog_gain_db.max} ( in steps of ${limits.imaging_analog_gain_db.step})
+									`.trimLeft().replaceAll('\n','<br>')">Gain [dB]</p>
+							<p class="channel-config-header"
+								x-init="enabletooltip($el)"
+								x-bind:tooltip="`
+									z offset (from focus reference) in micrometers.
+
+									range: ${limits.imaging_focus_offset_um.min} - ${limits.imaging_focus_offset_um.max} ( in steps of ${limits.imaging_focus_offset_um.step})
+									`.trimLeft().replaceAll('\n','<br>')">Off. [um]</p>
+							<p class="channel-config-header"
+								x-init="enabletooltip($el)"
+								x-bind:tooltip="`
+									illumination strength as percent of maximum.
+
+									range: ${limits.imaging_illum_perc.min} - ${limits.imaging_illum_perc.max} ( in steps of ${limits.imaging_illum_perc.step})
+									`.trimLeft().replaceAll('\n','<br>')">Pow. [%]</p>
+							<p class="channel-config-header"
+								x-init="enabletooltip($el)"
+							 	x-bind:tooltip="`
+									number of z planes.
+
+									range: ${limits.imaging_number_z_planes.min} - ${limits.imaging_number_z_planes.max} ( in steps of ${limits.imaging_number_z_planes.step})
+									`.trimLeft().replaceAll('\n','<br>')" >num z</p>
+							<p class="channel-config-header"
+								x-init="enabletooltip($el)"
+								x-bind:tooltip="`
+									distance between z planes in um.
+									
+									range: ${limits.imaging_delta_z_um.min} - ${limits.imaging_delta_z_um.max} ( in steps of ${limits.imaging_delta_z_um.step})
+									`.trimLeft().replaceAll('\n','<br>')" >delta z [um]</p>
+							
+							<style>
+								.channel-config-row-container{
+									background:var(--strong-bg-color);
+
+									display: grid;
+									grid-column: 1 / -1;            /* span full width of parent grid */
+									grid-template-columns: subgrid; /* inherit columns from .parent */
+									grid-template-rows:    subgrid; /* inherit rows from .parent */
+									gap: inherit;
+									/* see #channelgrid for comment on padding */
+									padding: 0.2em 0;
+
+									*{
+										box-sizing: content-box;
+									}
+								}
+								.channel-config-row-container:hover{
+									background: lightcoral;
+								}
+								.channel-config-row-name{
+									/* stretch label to full row height*/
+									display:block;
+									height: 100%;
+
+									/* make it stick to the left edge while scrolling, to always be visible */
+									position:sticky;
+									left:0;
+
+									/* inherit background color from parent (would otherwise be transparent and mess with position:sticky; display */
+									background:inherit;
+								}
+							</style>
 
 							<template x-for="channel in microscope_config.channels">
-								<div style="display:contents;">
+								<div class="channel-config-row-container">
 									<input x-bind:id="`${channel.handle}-enabled`" type="checkbox"
-										x-model="channel.enabled"
-										x-init="enabletooltip($el)"
-										x-bind:tooltip="`
-											Indicates if ${channel.name} channel should be imaged during acqusition.
-
-											With the current setting, this channel will ${channel.enabled?'be':'not be'} imaged.
-										`.trimLeft().replaceAll('\n','<br>')"/>
-									<label x-bind:for="`${channel.handle}-enabled`" x-text="channel.name"
-										x-effect="disableElement($el,()=>!channel.enabled)" ></label>
+										x-model="channel.enabled"/>
+									<div class="channel-config-row-name">
+										<label x-bind:for="`${channel.handle}-enabled`" x-text="channel.name"
+											x-effect="disableElement($el,()=>!channel.enabled)" ></label>
+									</div>
 									<button x-on:click="Actions.snapChannel({channel})"
 										x-on:mouseenter="channel_makeVisible(channel.handle);"
 										x-effect="disableElement($el,()=>!channel.enabled)" >snap</button>
 
-									<input type="number" min=0.1 step=0.1 max=936 placeholder="5"
+									<input type="number" min="limits.imaging_exposure_time_ms.min" step="limits.imaging_exposure_time_ms.step"
+									max="limits.imaging_exposure_time_ms.max" placeholder="5"
 										x-model="channel.exposure_time_ms"
-										x-init="enabletooltip($el),registerNumberInput($el)" x-bind:tooltip="`
-											exposure time in milliseconds in the ${channel.name} channel.
+										x-init="registerNumberInput($el)" is="number-input"
+										x-effect="disableElement($el,()=>!channel.enabled)" />
 
-											range: ${$el.min} - ${$el.max} ( in steps of ${$el.step})
-											`.trimLeft().replaceAll('\n','<br>')" 
+									<input type="number" min="limits.imaging_analog_gain_db.min" step="limits.imaging_analog_gain_db.step"
+									max="limits.imaging_analog_gain_db.max" placeholder=0 x-model="channel.analog_gain"
+										x-init="registerNumberInput($el)" is="number-input"
+										x-effect="disableElement($el,()=>!channel.enabled)" />
+
+									<input type="number" min="limits.imaging_focus_offset_um.min" step="limits.imaging_focus_offset_um.step"
+										max="limits.imaging_focus_offset_um.max" placeholder=0
+										x-model="channel.z_offset_um" x-init="registerNumberInput($el)"
 										is="number-input"
 										x-effect="disableElement($el,()=>!channel.enabled)" />
-									<input type="number" min=0 step=0.1 max=24 placeholder=0 x-model="channel.analog_gain"
-										x-init="enabletooltip($el),registerNumberInput($el)" x-bind:tooltip="`
-											analog gain in decibels in the ${channel.name} channel.
 
-											range: ${$el.min} - ${$el.max} ( in steps of ${$el.step})
-											`.trimLeft().replaceAll('\n','<br>')"
-											is="number-input"
-										x-effect="disableElement($el,()=>!channel.enabled)" />
-									<input type="number" min=-150 step=0.1 max=+150 placeholder=0
-										x-model="channel.z_offset_um" x-init="enabletooltip($el),registerNumberInput($el)"
+									<input type="number" min="limits.imaging_illum_perc.min" step="limits.imaging_illum_perc.step"
+										max="limits.imaging_illum_perc.max" placeholder=100
+										x-model="channel.illum_perc"
 										is="number-input"
-										x-bind:tooltip="`
-											z offset in micrometers in the ${channel.name} channel.
+										x-init="registerNumberInput($el),$nextTick(()=>$dispatch('blur'))"
+										x-effect="disableElement($el,()=>!channel.enabled)" />
 
-											range: ${$el.min} - ${$el.max} ( in steps of ${$el.step})
-											`.trimLeft().replaceAll('\n','<br>')"
-										x-effect="disableElement($el,()=>!channel.enabled)" />
-									<input type="number" min=1 step=0.1 max=100 placeholder=100 x-model="channel.illum_perc"
+									<input type="number" min="limits.imaging_number_z_planes.min" step="limits.imaging_number_z_planes.step"
+										max="limits.imaging_number_z_planes.max" placeholder=1
+										x-model="channel.num_z_planes"
 										is="number-input"
-										x-init="enabletooltip($el),registerNumberInput($el),$nextTick(()=>$dispatch('blur'))" x-bind:tooltip="`
-											illumination strength as percent of maximum in the ${channel.name} channel.
+										x-init="registerNumberInput($el)"
+										x-effect="disableElement($el,()=>!channel.enabled)" />
 
-											range: ${$el.min} - ${$el.max} ( in steps of ${$el.step})
-											`.trimLeft().replaceAll('\n','<br>')"
-										x-effect="disableElement($el,()=>!channel.enabled)" />
-									<input type="number" min=1 step=2 max=999 placeholder=1 x-model="channel.num_z_planes"
+									<input type=number min="limits.imaging_delta_z_um.min" step="limits.imaging_delta_z_um.step"
+										max="limits.imaging_delta_z_um.max" placeholder="3"
+										x-model="channel.delta_z_um"
 										is="number-input"
-										x-init=" enabletooltip($el),registerNumberInput($el)" x-bind:tooltip="`
-											number of z planes in the ${channel.name} channel.
-
-											range: ${$el.min} - ${$el.max} ( in steps of ${$el.step})
-											`.trimLeft().replaceAll('\n','<br>')" 
-										x-effect="disableElement($el,()=>!channel.enabled)" />
-									<input type=number min=0.1 step=0.1 max=999 placeholder="3" x-model="channel.delta_z_um"
-										is="number-input"
-										x-init="enabletooltip($el),registerNumberInput($el)" x-bind:tooltip="`
-											distance between z planes in the ${channel.name} channel.
-											
-											range: ${$el.min} - ${$el.max} ( in steps of ${$el.step})
-											`.trimLeft().replaceAll('\n','<br>')" 
+										x-init="registerNumberInput($el)"
 										x-effect="disableElement($el,()=>!channel.enabled)" />
 								</div>
 							</template>
