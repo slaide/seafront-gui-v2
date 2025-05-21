@@ -244,6 +244,49 @@
 							</template>
 						</div>
 					</div>
+					<div tabname="Protocols">
+						<div>
+							<button x-on:click="protocol_list=(await getConfigList()).configs">refresh list</button>
+						</div>
+						<div>
+							<label>Filename:</label>
+							<input x-model="configStore_filename" type="text" placeholder="filename">
+							<label>overwrite?</label>
+							<input type="checkbox" x-model="configStore_overwrite_on_conflict">
+							<button x-on:click="storeCurrentConfig">Store</button>
+						</div>
+						<div>
+							<table>
+								<tr>
+									<th></th>
+									<th>filename</th>
+									<th>timestamp</th>
+									<th>comment</th>
+									<th>cell_line</th>
+									<th>plate type</th>
+								</tr>
+								<template x-for="protocol in protocol_list">
+									<tr>
+										<td>
+											<button x-on:click="Object.assign(microscope_config,(await loadConfig({config_file:protocol.filename})).file)">Load</button>
+										</td>
+										<td x-text="protocol.filename"></td>
+										<td x-text="protocol.timestamp"></td>
+										<td x-text="protocol.comment"></td>
+										<td x-text="protocol.cell_line"></td>
+										<td
+											x-init="enabletooltip($el)"
+											x-bind:tooltip="`
+												Manufacturer: ${protocol.plate_type.Manufacturer}
+												Model Name: ${protocol.plate_type.Model_name}
+												Model ID: ${protocol.plate_type.Model_id}
+											`.trimLeft().replaceAll('\n','<br>')"
+											x-text="protocol.plate_type.Model_id"></td>
+									</tr>
+								</template>
+							</table>
+						</div>
+					</div>
 					<div tabname="machine config">
 						<div>
 							<label>filter handles</label>
@@ -299,49 +342,6 @@
 								</tr>
 							</template>
 						</table>
-					</div>
-					<div tabname="Protocols">
-						<div>
-							<button x-on:click="protocol_list=(await getConfigList()).configs">refresh list</button>
-						</div>
-						<div>
-							<label>Filename:</label>
-							<input x-model="configStore_filename" type="text" placeholder="filename">
-							<label>overwrite?</label>
-							<input type="checkbox" x-model="configStore_overwrite_on_conflict">
-							<button x-on:click="storeCurrentConfig">Store</button>
-						</div>
-						<div>
-							<table>
-								<tr>
-									<th></th>
-									<th>filename</th>
-									<th>timestamp</th>
-									<th>comment</th>
-									<th>cell_line</th>
-									<th>plate type</th>
-								</tr>
-								<template x-for="protocol in protocol_list">
-									<tr>
-										<td>
-											<button x-on:click="Object.assign(microscope_config,(await loadConfig({config_file:protocol.filename})).file)">Load</button>
-										</td>
-										<td x-text="protocol.filename"></td>
-										<td x-text="protocol.timestamp"></td>
-										<td x-text="protocol.comment"></td>
-										<td x-text="protocol.cell_line"></td>
-										<td
-											x-init="enabletooltip($el)"
-											x-bind:tooltip="`
-												Manufacturer: ${protocol.plate_type.Manufacturer}
-												Model Name: ${protocol.plate_type.Model_name}
-												Model ID: ${protocol.plate_type.Model_id}
-											`.trimLeft().replaceAll('\n','<br>')"
-											x-text="protocol.plate_type.Model_id"></td>
-									</tr>
-								</template>
-							</table>
-						</div>
 					</div>
 					<div tabname="LAF debug">
 						<div>
