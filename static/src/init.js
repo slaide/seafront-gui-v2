@@ -1578,7 +1578,7 @@ document.addEventListener('alpine:init', () => {
                 // generate new wells in the dom
                 if ((this.plateNumWells(newplate) != this.plateNumWells(oldplate)) || force_override) {
                     const new_wells = this.createPlateWells(newplate);
-                    this.microscope_config.plate_wells = new_wells;
+                    this.microscope_config.plate_wells=new_wells;
                 }
             }
 
@@ -1592,10 +1592,7 @@ document.addEventListener('alpine:init', () => {
                 }
             }
             // insert new elements
-            this.microscope_config.grid.mask.splice(
-                0, this.microscope_config.grid.mask.length,
-                ...new_masks
-            );
+            this.microscope_config.grid.mask=new_masks;
 
             // await plate navigator update
             await this.setPlate(

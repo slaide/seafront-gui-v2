@@ -235,7 +235,7 @@
 						</style>
 						<div id=grid-container x-bind:style="`--num-cols:${channelViewNumCols};`">
 							<!--div x-html="cached_channel_image.get('fluo405').info.timestamp"></div-->
-							<template x-for="channel in microscope_config.channels.filter(c=>c.enabled)">
+							<template x-for="channel in microscope_config.channels.filter(c=>c.enabled)" :key="channel.handle">
 								<div class="channel-box" x-bind:channelhandle="channel.handle">
 									<div x-bind:id="`channel-display-${channel.handle}`" x-text="channel.name"></div>
 									<div x-effect="updateChannelCache($el)" class="channel-box-image"
@@ -265,7 +265,7 @@
 									<th>cell_line</th>
 									<th>plate type</th>
 								</tr>
-								<template x-for="protocol in protocol_list">
+								<template x-for="protocol in protocol_list" :key="Math.random()">
 									<tr>
 										<td>
 											<button x-on:click="Object.assign(microscope_config,(await loadConfig({config_file:protocol.filename})).file)">Load</button>
@@ -302,7 +302,8 @@
 								<th>name</th>
 							</tr>
 							<template 
-								x-for="config in microscope_config.machine_config.toSorted((a,b)=>(a.handle<b.handle)?-1:1)">
+								x-for="config in microscope_config.machine_config.toSorted((a,b)=>(a.handle<b.handle)?-1:1)"
+								:key="config.handle">
 								<tr x-show="config.handle.indexOf(machineConfigHandleFilter)>=0">
 									<td>
 										<input x-bind:id="`machineconfig-${config.handle}-frozen`" type="checkbox" x-model="config.frozen" x-init="disableElement($el,()=>(config.frozen||config.value_kind=='action'))">
@@ -329,7 +330,7 @@
 											<select x-model="config.value"
 												x-init="$el.value=config.value"
 												x-effect="disableElement($el,()=>config.frozen)">
-												<template x-for="option in config.options">
+												<template x-for="option in config.options" :key="option.handle">
 													<optgroup x-bind:label="option.name">
 														<option x-bind:value="option.handle" x-text="option.handle"></option>
 													</optgroup>
@@ -476,15 +477,15 @@
 								<style>
 									#plate-type-selector{
 										display:grid;
-										grid-template: "l s" auto / auto auto;
+										grid-template: "l s" auto / auto 1fr;
 									}
 								</style>
 								<label>Well plate Type:</label>
 								<select id="platetype" x-on:change="await updatePlate($el.value)"
 									x-init="await updatePlate(microscope_config.wellplate_type.Model_id,true)">
-									<template x-for="plategroup in plateinfo.plategroups">
+									<template x-for="plategroup in plateinfo.plategroups" :key="plategroup.label">
 										<optgroup x-bind:label="plategroup.label">
-											<template x-for="plate in plategroup.plates">
+											<template x-for="plate in plategroup.plates" :key="plate.Model_id">
 												<option x-init="checkDefaultPlateType($el,plate,microscope_config)"
 													x-bind:value="plate.Model_id"
 													x-text="`${plate.Manufacturer} ${plate.Model_id_manufacturer} ( ${plate.Model_name} )`"></option>
@@ -524,14 +525,29 @@
 								--numcols:${microscope_config.wellplate_type.Num_wells_x};
 								--well-aspect-ratio:${microscope_config.wellplate_type.Well_size_x_mm/microscope_config.wellplate_type.Well_size_y_mm}
 								`" x-on:mouseleave="this.start_selected_well=null">
-								<template x-for="well in microscope_config.plate_wells">
-									<div x-init="if(well.col>=0 && well.row>=0) enabletooltip($el)"
-										x-bind:tooltip="`Well ${wellName(well)}`" x-text="wellText(well)"
+								<style>
+									.well{
+										display:grid;
+										justify-items: center;
+										span{
+											height:min-content;
+											display:inline-block;
+											position:relative;
+											top:50%;
+											transform: translateY(-50%);
+										}
+									}
+								</style>
+								<template x-for="well in microscope_config.plate_wells" :key="`c${well.col}r${well.row}`">
+									<div x-init="if((well.col>=0) && (well.row>=0)){enabletooltip($el)}"
+										x-bind:tooltip="`Well ${wellName(well)}`"
 										class="well noselect"
 										x-bind:class="`${well.selected?'selected':''} ${(well.col>=0 && well.row>=0)?'clickable':'wellheader'}`"
 										x-on:mousedown="this.start_selected_well=well"
 										x-on:mouseup="await toggleWellSelectionRange(this.start_selected_well,well)"
-										x-on:dblclick="await buttons_wellcontainer_dblclick(well)">
+										x-on:dblclick="await buttons_wellcontainer_dblclick(well)"
+									>
+										<span x-text="(!((well.col>=0) && (well.row>=0)))?wellText(well):''"></span>
 									</div>
 								</template>
 							</div>
@@ -708,7 +724,7 @@
 								}
 							</style>
 
-							<template x-for="channel in microscope_config.channels">
+							<template x-for="channel in microscope_config.channels" :key="channel.handle">
 								<div class="channel-config-row-container">
 									<input x-bind:id="`${channel.handle}-enabled`" type="checkbox"
 										x-model="channel.enabled"/>
@@ -783,14 +799,14 @@
 							<select id="live-channel-selection" x-model="actionInput.live_acquisition_channelhandle"
 								x-init="$nextTick(()=>{actionInput.live_acquisition_channelhandle = $el.value})">
 								<optgroup label="Fluorescence">
-									<template x-for="channel in microscope_config.channels">
+									<template x-for="channel in microscope_config.channels" :key="channel.handle">
 										<template x-if="channel.enabled && channel.handle[0]=='f'">
 											<option x-bind:value="channel.handle" x-text="channel.name"></option>
 										</template>
 									</template>
 								</optgroup>
 								<optgroup label="Brightfield">
-									<template x-for="channel in microscope_config.channels">
+									<template x-for="channel in microscope_config.channels" :key="channel.handle">
 										<template x-if="channel.enabled && channel.handle[0]=='b'">
 											<option x-bind:value="channel.handle" x-text="channel.name"></option>
 										</template>
@@ -949,7 +965,7 @@
 							changeTheme()
 						})"
 						x-on:change="changeTheme($el,$event)">
-						<template x-for="themeoption in themes">
+						<template x-for="themeoption in themes" :key="themeoption">
 							<option x-bind:value="themeoption" x-text="themeoption"></option>
 						</template>
 					</select>
