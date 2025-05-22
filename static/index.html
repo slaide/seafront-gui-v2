@@ -458,6 +458,12 @@
 						</div>
 
 						<div id="well-selector" class="scrolly">
+							<style>
+								#well-selector{
+									display:grid;
+									grid-template: "p" auto "w" auto / auto;
+								}
+							</style>
 							<script>
 								function checkDefaultPlateType(el, plate, microscope_config) {
 									if (plate.Model_id == microscope_config.wellplate_type.Model_id) {
@@ -466,7 +472,13 @@
 								}
 							</script>
 
-							<div>
+							<div id="plate-type-selector">
+								<style>
+									#plate-type-selector{
+										display:grid;
+										grid-template: "l s" auto / auto auto;
+									}
+								</style>
 								<label>Well plate Type:</label>
 								<select id="platetype" x-on:change="await updatePlate($el.value)"
 									x-init="await updatePlate(microscope_config.wellplate_type.Model_id,true)">
@@ -484,10 +496,8 @@
 
 							<style>
 								#wellcontainer {
-									width: 100%;
 									display: grid;
-									border-top: 1px solid black;
-									border-bottom: 1px solid black;
+									border: 1px solid black;
 
 									/*first column is well header which can have any size, all other wells must have equal size*/
 									grid-template-columns: auto repeat(var(--numcols), 1fr);
