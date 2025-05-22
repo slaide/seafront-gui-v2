@@ -602,6 +602,13 @@ document.addEventListener('alpine:init', () => {
                     this.status_ws.close();
                 }
 
+                // this is an obscure case that sometimes happens in practice.
+                // the underlying bug is probably a state synchronization issue,
+                // but we can work around this by just trying again later.
+                if(this.server_url==null){
+                    throw `server_url is invalid. retrying..`;
+                }
+
                 // try reconnecting (may fail if server is closed, in which case just try reconnecting later)
                 this.status_ws = new WebSocket(`${this.server_url}/ws/get_info/current_state`);
                 this.status_ws.onmessage = async ev => {
