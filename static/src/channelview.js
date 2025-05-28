@@ -34,7 +34,7 @@ export class ChannelImageView {
                     for (let el of document.getElementsByClassName("channel-box-image")) {
                         if (!(el instanceof HTMLElement)) continue;
 
-                        let scene = this.#makeImageScene(el)
+                        let scene = this._makeImageScene(el)
 
                         this.sceneInfos.push(scene)
                     }
@@ -98,7 +98,7 @@ export class ChannelImageView {
      * @param {HTMLElement} elem 
      * @returns {SceneInfo}
      */
-    #makeImageScene(elem) {
+    _makeImageScene(elem) {
         const channelhandle = elem.parentElement?.getAttribute(`channelhandle`)
         if (!channelhandle) { const error = `${elem} has no attribute "channelhandle"`; console.error(error); throw error }
 
@@ -123,7 +123,7 @@ export class ChannelImageView {
      * @param {CachedChannelImage} imageinfo 
      * @returns {{imgdata:Uint16Array|Uint8Array,datatype:THREE.UnsignedByteType|THREE.UnsignedShortType}}
      */
-    #imageInfoToImage(imageinfo) {
+    _imageInfoToImage(imageinfo) {
 
         // 2. Create a DataTexture using the LuminanceFormat to preserve the single-channel data.
         let datatype
@@ -150,11 +150,11 @@ export class ChannelImageView {
      * @param {CachedChannelImage} imageinfo
      * @returns {ChannelImageData}
      */
-    #makeImage(imageinfo) {
+    _makeImage(imageinfo) {
         const WIDTH_DOWNSAMPLE_FACTOR = 2
         const HEIGHT_DOWNSAMPLE_FACTOR = 2
 
-        let { imgdata, datatype } = this.#imageInfoToImage(imageinfo)
+        let { imgdata, datatype } = this._imageInfoToImage(imageinfo)
 
         const width = imageinfo.width / WIDTH_DOWNSAMPLE_FACTOR
         const height = imageinfo.height / HEIGHT_DOWNSAMPLE_FACTOR
@@ -256,7 +256,7 @@ export class ChannelImageView {
      * @param {CachedChannelImage} newimageinfo
      */
     updateTextureData(sceneInfo, newimageinfo) {
-        let { imgdata, datatype } = this.#imageInfoToImage(newimageinfo)
+        let { imgdata, datatype } = this._imageInfoToImage(newimageinfo)
 
         const channelhandle = newimageinfo.info.channel.handle
         if ((sceneInfo.elem?.getBoundingClientRect().width ?? 0) == 0) {
@@ -269,7 +269,7 @@ export class ChannelImageView {
         }
 
         if (!sceneInfo.img) {
-            sceneInfo.img = this.#makeImage(newimageinfo)
+            sceneInfo.img = this._makeImage(newimageinfo)
 
             if (sceneInfo.img) {
                 sceneInfo.scene.add(sceneInfo.img.mesh)

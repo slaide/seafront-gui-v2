@@ -61,7 +61,7 @@ export function registerNumberInput(el) {
     let stepvalue = parseFloat(el.step);
     if (isNaN(stepvalue)) stepvalue = null;
 
-    const numdigits = getnumberofdecimaldigits(stepvalue)
+    const numdigits = getnumberofdecimaldigits(stepvalue);
     /**
      * 
      * @param {number} newval
@@ -81,6 +81,15 @@ export function registerNumberInput(el) {
         }
 
         return (el.value || minvalue || maxvalue || 0) + "";
+    }
+
+    const maxnumchars=Math.max(
+        formatNumberInput(minvalue??0).length,
+        formatNumberInput(maxvalue??0).length,
+        formatNumberInput(parseFloat(el.value)??0).length
+    );
+    if(maxnumchars!=null && !isNaN(maxnumchars)){
+        el.setAttribute("size",`${maxnumchars}`);
     }
 
     let placeholdervalue = parseFloat(el.getAttribute("placeholder") ?? "");

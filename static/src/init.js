@@ -28,7 +28,7 @@ import { makeHistogram,histogramLayout,histogramConfig } from "histogram";
  * add 'disabled' attribute to an element if condition is true, otherwise removes the attribute.
  * @param {HTMLElement} el
  * @param {function():boolean} condition
- * */
+ */
 function disableElement(el, condition) {
     if (condition()) {
         el.setAttribute("disabled", "true")
@@ -93,12 +93,36 @@ document.addEventListener('alpine:init', () => {
         tooltipConfig,
 
         limits:{
-            imaging_exposure_time_ms:{min:0.1,step:0.1,max:936},
-            imaging_analog_gain_db:{min:0,step:0.1,max:24},
-            imaging_focus_offset_um:{min:-200,step:0.1,max:200},
-            imaging_illum_perc:{min:0,step:0.1,max:100},
-            imaging_number_z_planes:{min:1,step:2,max:999},
-            imaging_delta_z_um:{min:0.1,step:0.1,max:1000},
+            imaging_exposure_time_ms:{
+                min:0.1,
+                step:0.1,
+                max:936
+            },
+            imaging_analog_gain_db:{
+                min:0,
+                step:0.1,
+                max:24
+            },
+            imaging_focus_offset_um:{
+                min:-200,
+                step:0.1,
+                max:200
+            },
+            imaging_illum_perc:{
+                min:0,
+                step:0.1,
+                max:100
+            },
+            imaging_number_z_planes:{
+                min:1,
+                step:2,
+                max:999
+            },
+            imaging_delta_z_um:{
+                min:0.1,
+                step:0.1,
+                max:1000
+            },
         },
 
         themes:["light","dark"],
@@ -172,46 +196,6 @@ document.addEventListener('alpine:init', () => {
             });
 
             return configlist;
-        },
-
-        /**
-         * @param {StoreConfigRequest} body
-         * @returns {Promise<StoreConfigResponse>}
-         */
-        async storeConfig(body){
-            const response=await fetch(`${this.server_url}/api/acquisition/config_store`,{
-                method:"POST",
-                body:JSON.stringify(body),
-                headers: [
-                    ["Content-Type", "application/json"]
-                ]
-            }).then(v=>{
-                /** @ts-ignore @type {CheckMapSquidRequestFn<StoreConfigResponse,InternalErrorModel>} */
-                const check=checkMapSquidRequest;
-                return check(v);
-            });
-
-            return response;
-        },
-
-        /**
-         * @param {LoadConfigRequest} body
-         * @returns {Promise<LoadConfigResponse>}
-         */
-        async loadConfig(body){
-            const response=await fetch(`${this.server_url}/api/acquisition/config_fetch`,{
-                method:"POST",
-                body:JSON.stringify(body),
-                headers: [
-                    ["Content-Type", "application/json"]
-                ]
-            }).then(v=>{
-                /** @ts-ignore @type {CheckMapSquidRequestFn<LoadConfigResponse,InternalErrorModel>} */
-                const check=checkMapSquidRequest;
-                return check(v);
-            });
-
-            return response;
         },
 
         /**
@@ -332,7 +316,7 @@ document.addEventListener('alpine:init', () => {
         /** used in GUI to configure filename when storing current config on server */
         configStore_filename:"",
         configStore_overwrite_on_conflict:false,
-        async storeCurrentConfig(){
+        async storeConfig(){
             const configStoreEntry={
                 // structuredClone does not work on this
                 config_file:this.microscope_config_copy,
@@ -341,15 +325,30 @@ document.addEventListener('alpine:init', () => {
                 comment:this.microscope_config.comment,
                 overwrite_on_conflict:this.configStore_overwrite_on_conflict,
             };
-            await this.storeConfig(configStoreEntry);
+            await this.Actions.storeConfig(configStoreEntry);
 
             // ensure no config is overwritten by accident afterwards
             this.configStore_overwrite_on_conflict=false;
             this.configStore_filename="";
 
+            this.configIsStored=true;
+
             // refresh list after store (to confirm successful store)
             await this.refreshConfigList();
         },
+        /**
+         * 
+         * @param {ConfigListEntry} protocol 
+         */
+        async loadConfig(protocol){
+            const newconfig=await this.Actions.loadConfig({config_file:protocol.filename})
+            Object.assign(this.microscope_config,newconfig.file)
+
+            this.configIsStored=true;
+        },
+
+        /** indicate if config currently present in interface is stored somewhere */
+        configIsStored:false,
 
         // keep track of global initialization state
         initDone:false,
@@ -456,7 +455,7 @@ document.addEventListener('alpine:init', () => {
                 cws.onerror = ev => reject(ev);
             });
             const data = await finished;
-            console.log(data.info.channel.name, data);
+            // console.log("fetched image",data.info.channel.name, data);
             return data;
         },
         /**
@@ -527,21 +526,18 @@ document.addEventListener('alpine:init', () => {
             await this.plateNavigator.loadPlate(microscope_config, plate);
         },
 
-        /** @type {MicroscopeState|null} */
-        _state: null,
+        /** @type {MicroscopeState|{}} */
+        _state: {},
         /** @returns {MicroscopeState} */
         get state(){
-            if(!this._state){ throw `bug in state`; }
+            if(Object.keys(this._state).length==0){ throw `bug in state`; }
+            //@ts-ignore
             return this._state;
         },
         /**
          * @param {MicroscopeState} newstate
          */
         set state(newstate){
-            if(!this._state){
-                /** @ts-ignore */
-                this._state={};
-            }
             /** @ts-ignore */
             Object.assign(this._state,newstate);
         },
@@ -679,9 +675,9 @@ document.addEventListener('alpine:init', () => {
         /**
          * 
          * @param {HTMLCanvasElement} el
-         * @returns {Promise<void>}
+         * @returns {void}
          */
-        async initChannelView(el) {
+        initChannelView(el) {
             this.view = new ChannelImageView(el, this.cached_channel_image)
         },
         /** @type {ChannelImageView|null} */
@@ -695,16 +691,17 @@ document.addEventListener('alpine:init', () => {
          */
         updateChannelCache(channelElement) {
             const channelhandle = channelElement.parentElement?.getAttribute("channelhandle")
-            console.log(`updating ${channelhandle}`)
+            // console.log(`updating ${channelhandle}`)
             if (!channelhandle) { const error = `element is not a valid channel-box-image`; console.error(error); throw error }
             const cachedImage = this.cached_channel_image.get(channelhandle)
             if (!cachedImage) return null;
 
-            const channelView = this.view?.sceneInfos.find(s => s.elem == channelElement);
+            if (!this.view) return null;
+
+            const channelView = this.view.sceneInfos.find(s => s.elem == channelElement);
             if (!channelView) return null;
 
-            if (!this.view) return null;
-            this.view.updateTextureData(channelView, cachedImage)
+            this.view.updateTextureData(channelView, cachedImage);
         },
 
         /** get total number of images acquired with current config */
@@ -818,8 +815,6 @@ document.addEventListener('alpine:init', () => {
             await this.updatePlate(undefined, undefined)
         },
 
-        /** @type {string|null} */
-        current_acquisition_id:null,
         /**
          * rpc to api/acquisition/start
          * 
@@ -849,9 +844,6 @@ document.addEventListener('alpine:init', () => {
                 /** @ts-ignore @type {CheckMapSquidRequestFn<AcquisitionStartResponse,AcquisitionStartError>} */
                 const check=checkMapSquidRequest;
                 return check(v)
-            }).then(v=>{
-                this.current_acquisition_id=v.acquisition_id;
-                return v;
             });
         },
         /**
@@ -880,6 +872,15 @@ document.addEventListener('alpine:init', () => {
         },
         /** @type {AcquisitionStatusOut?} */
         latest_acquisition_status:null,
+        get current_acquisition_progress_percent(){
+            const images_done=this.latest_acquisition_status?.acquisition_progress.current_num_images;
+            if(images_done==null)return 0;
+            
+            const total_images=this.latest_acquisition_status?.acquisition_meta_information.total_num_images;
+            if(total_images==null)return 0;
+
+            return images_done/total_images*100;
+        },
         /**
          * rpc to /api/acquisition/status
          * @param {AcquisitionStatusRequest} body
@@ -901,6 +902,45 @@ document.addEventListener('alpine:init', () => {
             
         get Actions(){
             return {
+                /**
+                 * @param {StoreConfigRequest} body
+                 * @returns {Promise<StoreConfigResponse>}
+                 */
+                storeConfig:async(body)=>{
+                    const response=await fetch(`${this.server_url}/api/acquisition/config_store`,{
+                        method:"POST",
+                        body:JSON.stringify(body),
+                        headers: [
+                            ["Content-Type", "application/json"]
+                        ]
+                    }).then(v=>{
+                        /** @ts-ignore @type {CheckMapSquidRequestFn<StoreConfigResponse,InternalErrorModel>} */
+                        const check=checkMapSquidRequest;
+                        return check(v);
+                    });
+
+                    return response;
+                },
+
+                /**
+                 * @param {LoadConfigRequest} body
+                 * @returns {Promise<LoadConfigResponse>}
+                 */
+                loadConfig:async(body)=>{
+                    const response=await fetch(`${this.server_url}/api/acquisition/config_fetch`,{
+                        method:"POST",
+                        body:JSON.stringify(body),
+                        headers: [
+                            ["Content-Type", "application/json"]
+                        ]
+                    }).then(v=>{
+                        /** @ts-ignore @type {CheckMapSquidRequestFn<LoadConfigResponse,InternalErrorModel>} */
+                        const check=checkMapSquidRequest;
+                        return check(v);
+                    });
+
+                    return response;
+                },
                 /**
                  * rpc to /api/action/move_by
                  * @param {MoveByRequest} body
@@ -1235,12 +1275,35 @@ document.addEventListener('alpine:init', () => {
         should be stored here to avoid dom interactions outside alpine
         */
         actionInput: {
-            move_by_x_mm: 1,
-            move_by_y_mm: 1,
-            move_by_z_um: 1,
-
             live_acquisition_channelhandle: "",
             live_acquisition_framerate: 5.0,
+        },
+
+        /** @type {'x'|'y'|'z'} */
+        moveByAxis:"z",
+        /** move by distance. unit depends on moveByAxis */
+        moveByDistance:1,
+        /**
+         * 
+         * @param {'+'|'-'} d
+         */
+        async stageMoveBy(d){
+            let distance_mm=this.moveByDistance;
+            // z axis unit is um, xy is mm
+            if(this.moveByAxis=='z'){
+                distance_mm*=1e-3;
+            }
+
+            switch(d){
+                case '+':{
+                    distance_mm*=+1;
+                }break;
+                case '-':{
+                    distance_mm*=-1;
+                }break;
+            }
+            
+            await this.Actions.moveBy({ axis: this.moveByAxis, distance_mm});
         },
 
         get laserAutofocusIsCalibrated(){

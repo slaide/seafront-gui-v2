@@ -98,9 +98,12 @@
 				color:var(--text-color);
 				border:1px solid var(--text-color);
 				border-radius:0.4em;
-				cursor:pointer;
 			}
-			button:hover{
+			button[disabled]{
+				text-decoration:line-through;
+			}
+			button:not([disabled]):hover{
+				cursor:pointer;
 				background:var(--strong-bg-color);
 				font-style: italic;
 			}
@@ -191,7 +194,7 @@
 					</style>
 
 					<div tabname="live view">
-						<div id="plate" style="width:100%;aspect-ratio:4/3;" x-init="initPlateNavigator($el)"></div>
+						<div id="plate" style="width:100%;aspect-ratio:3/2;" x-init="initPlateNavigator($el)"></div>
 						<p>
 							<span>Legend:</span>
 							<span x-bind:style="`background:#${matWellColor.toString(16).padStart(6,'0')}A0;`">Well</span>
@@ -207,7 +210,7 @@
 								min=1 max=4 step=1 x-model="channelViewNumCols"
 								x-init="registerNumberInput($el)">
 						</div>
-						<canvas id="c" x-init="await initChannelView($el);$watch('theme',()=>view.setClearColorFromBody())"></canvas>
+						<canvas id="c" x-init="initChannelView($el);$watch('theme',()=>view.setClearColorFromBody())"></canvas>
 						<style>
 							#c {
 								position: fixed;
@@ -246,14 +249,14 @@
 					</div>
 					<div tabname="Protocols">
 						<div>
-							<button x-on:click="protocol_list=(await getConfigList()).configs">refresh list</button>
+							<button @click="protocol_list=(await getConfigList()).configs">refresh list</button>
 						</div>
 						<div>
 							<label>Filename:</label>
 							<input x-model="configStore_filename" type="text" placeholder="filename">
 							<label>overwrite?</label>
 							<input type="checkbox" x-model="configStore_overwrite_on_conflict">
-							<button x-on:click="storeCurrentConfig">Store</button>
+							<button @click="storeConfig">Store</button>
 						</div>
 						<div>
 							<table>
@@ -268,7 +271,7 @@
 								<template x-for="protocol in protocol_list" :key="Math.random()">
 									<tr>
 										<td>
-											<button x-on:click="Object.assign(microscope_config,(await loadConfig({config_file:protocol.filename})).file)">Load</button>
+											<button @click="await loadConfig(protocol);$nextTick(()=>{configIsStored=true;});">Load</button>
 										</td>
 										<td x-text="protocol.filename"></td>
 										<td x-text="protocol.timestamp"></td>
@@ -291,7 +294,7 @@
 						<div>
 							<label>filter handles</label>
 							<input type="text" x-model="machineConfigHandleFilter" placeholder="filter handles containing this">
-							<button x-on:click="microscope_config.machine_config=await getMachineDefaults()">reset all values</button>
+							<button @click="microscope_config.machine_config=await getMachineDefaults()">reset all values</button>
 						</div>
 						<table>
 							<tr>
@@ -324,7 +327,7 @@
 											<textarea rows=3 wrap=soft x-model="config.value" x-effect="disableElement($el,()=>config.frozen)"></textarea>
 										</template>
 										<template x-if="config.value_kind=='action'">
-											<button x-text="config.value" x-on:click="await runMachineConfigAction(config)"></button>
+											<button x-text="config.value" @click="await runMachineConfigAction(config)"></button>
 										</template>
 										<template x-if="config.value_kind=='option'">
 											<select x-model="config.value"
@@ -348,7 +351,7 @@
 						<div>
 							<label>num steps</label><input type="number" x-model="laserAutofocusDebug_numz" step="2" min="3" max="99">
 							<label>delta z [um]</label><input type="number" x-model="laserAutofocusDebug_totalz_um" step="10" min="20" max="500">
-							<button x-on:click="buttons_laserAutofocusDebugMeasurement">measure</button>
+							<button @click="buttons_laserAutofocusDebugMeasurement">measure</button>
 
 							<div
 								style="width:100%;"
@@ -357,7 +360,7 @@
 							</div>
 
 							<div>
-								<button x-on:click="button_laserAutofocusGetLatestImage">fetch laser autofocus image</button>
+								<button @click="button_laserAutofocusGetLatestImage">fetch laser autofocus image</button>
 								<canvas style="width:100%;" x-init="latestLaserAutofocusImageCanvas=$el"></canvas>
 							</div>
 						</div>
@@ -423,38 +426,38 @@
 							</style>
 							<label style="grid-area:l-n-x;">num x</label>
 							<input style="grid-area:v-n-x;" type="number" min="1" max="999" step="1"
-								x-on:change="updatePlate" x-model="microscope_config.grid.num_x">
+								@change="updatePlate" x-model="microscope_config.grid.num_x">
 
 							<label style="grid-area:l-d-x;">delta x [mm]</label>
 							<input style="grid-area:v-d-x;" x-effect="disableElement($el,()=>microscope_config.grid.num_x==1)"
-								type="number" min="0.1" max="999" step="0.1" x-on:change="updatePlate"
+								type="number" min="0.1" max="999" step="0.1" @change="updatePlate"
 								x-model="microscope_config.grid.delta_x_mm">
 
 							<label style="grid-area:l-n-y;">num y</label>
 							<input style="grid-area:v-n-y;" type="number" min="1" max="999" step="1"
-								x-on:change="updatePlate" x-model="microscope_config.grid.num_y">
+								@change="updatePlate" x-model="microscope_config.grid.num_y">
 
 							<label style="grid-area:l-d-y;">delta y [mm]</label>
 							<input style="grid-area:v-d-y;" x-effect="disableElement($el,()=>microscope_config.grid.num_y==1)"
-								type="number" min="0.1" max="999" step="0.1" x-on:change="updatePlate"
+								type="number" min="0.1" max="999" step="0.1" @change="updatePlate"
 								x-model="microscope_config.grid.delta_y_mm">
 
 							<label style="grid-area:l-n-t;">num t</label>
 							<input style="grid-area:v-n-t;" type="number" min="1" max="9999" step="1"
-								x-on:change="updatePlate" x-model="microscope_config.grid.num_t">
+								@change="updatePlate" x-model="microscope_config.grid.num_t">
 
 							<label style="grid-area:l-d-t;">delta t</label>
 							<label style="grid-area:l-d-t-h;">h</label>
 							<input x-effect="disableElement($el,()=>microscope_config.grid.num_t==1)" style="grid-area:v-d-t-h;"
-								type="number" min="0" max="999" step="0.1" x-on:change="updatePlate"
+								type="number" min="0" max="999" step="0.1" @change="updatePlate"
 								x-model="microscope_config.grid.delta_t.h">
 							<label style="grid-area:l-d-t-m;">m</label>
 							<input x-effect="disableElement($el,()=>microscope_config.grid.num_t==1)" style="grid-area:v-d-t-m;"
-								type="number" min="0" max="59.9" step="0.1" x-on:change="updatePlate"
+								type="number" min="0" max="59.9" step="0.1" @change="updatePlate"
 								x-model="microscope_config.grid.delta_t.m">
 							<label style="grid-area:l-d-t-s;">s</label>
 							<input x-effect="disableElement($el,()=>microscope_config.grid.num_t==1)" style="grid-area:v-d-t-s;"
-								type="number" min="0" max="59.9" step="0.1" x-on:change="updatePlate"
+								type="number" min="0" max="59.9" step="0.1" @change="updatePlate"
 								x-model="microscope_config.grid.delta_t.s">
 						</div>
 
@@ -481,7 +484,7 @@
 									}
 								</style>
 								<label>Well plate Type:</label>
-								<select id="platetype" x-on:change="await updatePlate($el.value)"
+								<select id="platetype" @change="await updatePlate($el.value)"
 									x-init="await updatePlate(microscope_config.wellplate_type.Model_id,true)">
 									<template x-for="plategroup in plateinfo.plategroups" :key="plategroup.label">
 										<optgroup x-bind:label="plategroup.label">
@@ -524,7 +527,7 @@
 							<div id=wellcontainer x-bind:style="`
 								--numcols:${microscope_config.wellplate_type.Num_wells_x};
 								--well-aspect-ratio:${microscope_config.wellplate_type.Well_size_x_mm/microscope_config.wellplate_type.Well_size_y_mm}
-								`" x-on:mouseleave="this.start_selected_well=null">
+								`" @mouseleave="this.start_selected_well=null">
 								<style>
 									.well{
 										display:grid;
@@ -543,73 +546,13 @@
 										x-bind:tooltip="`Well ${wellName(well)}`"
 										class="well noselect"
 										x-bind:class="`${well.selected?'selected':''} ${(well.col>=0 && well.row>=0)?'clickable':'wellheader'}`"
-										x-on:mousedown="this.start_selected_well=well"
-										x-on:mouseup="await toggleWellSelectionRange(this.start_selected_well,well)"
-										x-on:dblclick="await buttons_wellcontainer_dblclick(well)"
+										@mousedown="this.start_selected_well=well"
+										@mouseup="await toggleWellSelectionRange(this.start_selected_well,well)"
+										@dblclick="await buttons_wellcontainer_dblclick(well)"
 									>
 										<span x-text="(!((well.col>=0) && (well.row>=0)))?wellText(well):''"></span>
 									</div>
 								</template>
-							</div>
-						</div>
-
-						<div>
-							<div>
-								<label>Total number of images:</label><span
-									x-text="num_images"></span>
-								<label>current acquisition:</label><span
-									x-text="current_acquisition_id??'none'"></span>
-								<!-- div id="acquisition-status"></div -->
-								<div style="display:grid;grid-template-columns: auto auto;">
-									<label>latest acquisition id</label><span 
-										x-text="latest_acquisition_status?.acquisition_id??''"></span>
-									<label>progress status</label><span
-										x-text="latest_acquisition_status?.acquisition_status??''"></span>
-									<label>progress message</label><span
-										x-text="latest_acquisition_status?.message??''"></span>
-									<label>comment</label><span
-										x-text="latest_acquisition_status?.acquisition_config.comment??''"></span>
-									<label>num images (acquired / total)</label><span
-										x-text="`${latest_acquisition_status?.acquisition_progress.current_num_images??''} / ${latest_acquisition_status?.acquisition_meta_information.total_num_images??''}`"></span>
-									<label>time [s] (elapsed / remaining)</label><span
-										x-text="`${latest_acquisition_status?.acquisition_progress.time_since_start_s.toFixed(1)??''} / ${latest_acquisition_status?.acquisition_progress.estimated_remaining_time_s.toFixed(1)??''}`"></span>
-									<label>storage [GB] (occupied / max total)</label><span
-										x-text="`${latest_acquisition_status?.acquisition_progress.current_storage_usage_GB.toFixed(2)??''} / ${latest_acquisition_status?.acquisition_meta_information.max_storage_size_images_GB.toFixed(2)??''}`"></span>
-								</div>
-							</div>
-							<div>
-								<label>Acquisition:</label>
-								<button
-									x-init="$watch('current_acquisition_id',async ()=>{
-										const getLatestStatus=async ()=>{
-											// stop fetching updates if no acquisition is currently running
-											if(current_acquisition_id==null){
-												return;
-											}
-
-											console.log('updated acquisition status')
-											const status=await acquisition_status({acquisition_id:current_acquisition_id});
-											latest_acquisition_status=status;
-
-											// if acquisition is completed, indicate that no acquisition is running anymore
-											if(status.acquisition_status=='completed'){
-												current_acquisition_id=null;
-											}
-
-											const status_element=document.getElementById('acquisition-status');
-											if(status_element){
-												status_element.innerHTML=JSON.stringify(status,null,2).replace('\n ','<br>&nbsp;');
-											}
-
-											$nextTick(getLatestStatus);
-										};
-										await getLatestStatus();
-									})"
-									x-on:click="await acquisition_start({ config_file: microscope_config })"
-									>Start</button>
-								<button
-									x-on:click="await acquisition_stop({ acquisition_id: current_acquisition_id })"
-									>Stop</button>
 							</div>
 						</div>
 					</div>
@@ -732,8 +675,8 @@
 										<label x-bind:for="`${channel.handle}-enabled`" x-text="channel.name"
 											x-effect="disableElement($el,()=>!channel.enabled)" ></label>
 									</div>
-									<button x-on:click="Actions.snapChannel({channel})"
-										x-on:mouseenter="channel_makeVisible(channel.handle);"
+									<button @click="Actions.snapChannel({channel})"
+										@mouseenter="channel_makeVisible(channel.handle);"
 										x-effect="disableElement($el,()=>!channel.enabled)" >snap</button>
 
 									<input type="number" min="limits.imaging_exposure_time_ms.min" step="limits.imaging_exposure_time_ms.step"
@@ -794,8 +737,8 @@
 
 									Note that this may quickly bleach your sample!
 								`.trimLeft().replaceAll('\n','<br>')">Live Acq.</label>
-							<button x-on:click="buttons_startStreaming">start</button>
-							<button x-on:click="buttons_endStreaming">stop</button>
+							<button @click="buttons_startStreaming">start</button>
+							<button @click="buttons_endStreaming">stop</button>
 							<select id="live-channel-selection" x-model="actionInput.live_acquisition_channelhandle"
 								x-init="$nextTick(()=>{actionInput.live_acquisition_channelhandle = $el.value})">
 								<optgroup label="Fluorescence">
@@ -836,74 +779,20 @@
 							<button
 								x-init="enabletooltip($el)"
 								x-bind:tooltip="`calibrate laser autofocus here, i.e. retain this level of focus on the cells.`"
-								x-on:click="buttons_calibrateLaserAutofocusHere"
+								@click="buttons_calibrateLaserAutofocusHere"
 							>Set here</button>
 
 							<label>Offset from reference [um]</label>
 							<span x-text="laserAutofocusOffsetText"></span>
-							<button x-on:click="button_laserAutofocusMeasureOffset">Measure</button>
+							<button @click="button_laserAutofocusMeasureOffset">Measure</button>
 
 							<label>Target Offset [um]</label>
 							<input type="number" x-model="laserAutofocusTargetOffsetUM">
-							<button x-on:click="button_laserAutofocusMoveToTargetOffset">Move</button>
+							<button @click="button_laserAutofocusMoveToTargetOffset">Move</button>
 						</div>
 
 						<div>
 							<div style="width: 100%;" x-init="makeHistogram($el)" x-effect="updateHistogram($el)"></div>
-						</div>
-					</div>
-
-					<div tabname="Stage Control">
-						<div id="objective-position" class="scrolly">
-							<style>
-								#objective-position {
-									display: grid;
-									grid-template:
-										" t    t    t           t    t    t    t" auto
-										" l-x  v-x  s           mx-l mx-v mx-f mx-b" auto
-										" l-y  v-y  s           my-l my-v my-f my-b" auto
-										" l-z  v-z  s           mz-l mz-v mz-f mz-b" auto
-										/ auto auto min-content auto 5em auto auto;
-									gap: 0 1em;
-
-									span {
-										height: min-content;
-										width: max-content;
-									}
-								}
-							</style>
-
-							<div style="grid-area:t;">objective position</div>
-							<div style="height:90%;width:1px;background:black;grid-area:s;"></div>
-
-							<span>x position [mm]</span>
-							<span x-text="state.adapter_state?.stage_position.x_pos_mm.toFixed(3)"></span>
-							<label>move x [mm]</label>
-							<input x-init="registerNumberInput($el)" type=number step=0.1 min="0.1" max="9999"
-								is="number-input" x-model="actionInput.move_by_x_mm">
-							<button x-on:click="await Actions.moveBy({ axis: 'x', distance_mm: actionInput.move_by_x_mm})">forward</button>
-							<button x-on:click="await Actions.moveBy({ axis: 'x', distance_mm: -1*actionInput.move_by_x_mm})">backward</button>
-
-							<span>y position [mm]</span>
-							<span x-text="state.adapter_state?.stage_position.y_pos_mm.toFixed(3)"></span>
-							<label>move y [mm]</label>
-							<input x-init="registerNumberInput($el)" type=number step=0.1 min="0.1" max="9999"
-								is="number-input" x-model="actionInput.move_by_y_mm">
-							<button x-on:click="await Actions.moveBy({ axis: 'y', distance_mm: actionInput.move_by_y_mm})">forward</button>
-							<button x-on:click="await Actions.moveBy({ axis: 'y', distance_mm: -1*actionInput.move_by_y_mm})">backward</button>
-
-							<span>z position [um]</span>
-							<span x-text="(state.adapter_state?.stage_position.z_pos_mm*1e3).toFixed(1)"></span>
-							<label>move z [um]</label>
-							<input x-init="registerNumberInput($el)" type=number step=0.1 min="0.1" max="9999"
-								is="number-input" x-model="actionInput.move_by_z_um">
-							<button x-on:click="await Actions.moveBy({ axis: 'z', distance_mm: actionInput.move_by_z_um*1e-3})">forward</button>
-							<button
-								x-on:click="await Actions.moveBy({ axis: 'z', distance_mm: -1*actionInput.move_by_z_um*1e-3})">backward</button>
-						</div>
-						<div id="loading-position-control" class="scrolly">
-							<button x-on:click="await Actions.enterLoadingPosition()">enter loading position</button>
-							<button x-on:click="await Actions.leaveLoadingPosition()">leave loading position</button>
 						</div>
 					</div>
 				</div>
@@ -912,51 +801,52 @@
 			<div id="bottom-bar">
 				<style>
 					#bottom-bar{
-						border-top:1px solid black;
+						border-top:1px solid var(--text-color);
 						grid-area: f;
 
+						gap:0 1em;
 						display:grid;
 						grid-template:
-							  "server-label     server-text     connection-indicator other-top" 1fr
-							  "microscope-label microscope-text connection-indicator other-bottom" 1fr
-							/  min-content      20em             auto                 auto;
+							  "server-label     server-text     other-1 other-3 acquisition" 1fr
+							  "microscope-label microscope-text other-2 other-4 acquisition" 1fr
+							/  min-content      20em            auto    auto    1fr ;
 					}
 				</style>
-				<label style="grid-area:server-label;">Server:</label>
+				<label style="grid-area:server-label;">
+					<span>Server:</span>
+					<style>
+						.connection-indicator{
+							display: inline-block;
+							aspect-ratio: 1/1;
+							height:1.2em;
+							border-radius: 50%;
+						}
+						.connection-indicator.connected{
+							background-color: #2ace1b;
+						}
+						.connection-indicator:not(.connected){
+							background-color: #e74c3c;
+						}
+					</style>
+					<span x-bind:class="`connection-indicator ${isConnectedToServer?'connected':''}`"
+						x-bind:tooltip="`this web interface ${isConnectedToServer?'is':'is NOT'} currently connected to the server at ${server_url} `"
+						x-init="enabletooltip($el)">&nbsp;</span>
+				</label>
 				<input style="grid-area:server-text;" type="text"
 					x-model="server_url_input"
-					x-on:keydown="(ev)=>{if(ev.key=='Enter'){$dispatch('blur')}}"
+					@keydown="(ev)=>{if(ev.key=='Enter'){$dispatch('blur')}}"
 					x-init="$nextTick(()=>{server_url_input=server_url;$dispatch('blur')})"
-					x-on:blur="status_reconnect(server_url_input)">
-
-				<div style="grid-area:connection-indicator;" x-bind:class="`connection-indicator ${isConnectedToServer?'connected':''}`"
-					x-bind:tooltip="`this web interface ${isConnectedToServer?'is':'is NOT'} currently connected to the server at ${server_url} `"
-					x-init="enabletooltip($el)"
-					>&nbsp;</div>
-				<style>
-					.connection-indicator{
-						display: inline-block;
-						aspect-ratio: 1/1;
-						height:1.2em;
-						border-radius: 50%;
-					}
-					.connection-indicator.connected{
-						background-color: #2ace1b;
-					}
-					.connection-indicator:not(.connected){
-						background-color: #e74c3c;
-					}
-				</style>
+					@blur="status_reconnect(server_url_input)">
 
 				<label style="grid-area:microscope-label;">Microscope:</label>
 				<span  style="grid-area:microscope-text;" x-text="getMachineConfigItem('microscope_name')?.value??'(none)'"></span>
 
-				<div style="grid-area:other-top;">
-					<label>tooltips enabled?</label>
-					<input type="checkbox" x-model="tooltipConfig.enabled">
+				<div style="grid-area:other-1;">
+					<label for="tooltips-enabled-checkbox">tooltips enabled?</label>
+					<input  id="tooltips-enabled-checkbox" type="checkbox" x-model="tooltipConfig.enabled">
 				</div>
 
-				<div style="grid-area:other-bottom;">
+				<div style="grid-area:other-2;">
 					<label>theme</label>
 					<select
 						x-model="theme"
@@ -964,11 +854,240 @@
 							console.log(`current theme is ${theme}`)
 							changeTheme()
 						})"
-						x-on:change="changeTheme($el,$event)">
+						@change="changeTheme($el,$event)">
 						<template x-for="themeoption in themes" :key="themeoption">
 							<option x-bind:value="themeoption" x-text="themeoption"></option>
 						</template>
 					</select>
+				</div>
+
+				<div style="grid-area:other-3;">
+					<label>protocol saved?</label>
+					<input type="checkbox" x-model="configIsStored" disabled
+						x-effect="const c=JSON.stringify(microscope_config);configIsStored=false;">
+				</div>
+
+				<div style="grid-area:other-4;">
+					<style>
+						.popup{
+							position:absolute;
+							top:0;
+							left:0;
+							background:var(--strong-bg-color);
+							z-index:1;
+							transform:translateY(-100%) translateX(-50%);
+							width:35em;
+							padding:0.5em;
+							border:1px solid var(--text-color);
+							border-radius:1em;
+						}
+					</style>
+					<script>
+						/**
+						 * @param {HTMLElement} el
+						 */
+						function registerContainedPopup(el){
+							const target_popups=el.getElementsByClassName("popup");
+							if(target_popups.length!=1)throw``;
+							const target_popup=target_popups[0];
+
+							makeInvisible(target_popup);
+							el.addEventListener("mouseenter",()=>{
+								makeVisible(target_popup);
+							});
+							el.addEventListener("mouseleave",()=>{
+								makeInvisible(target_popup);
+							});
+						}
+						function makeVisible(el){
+							const parentRect=el.parentElement.getBoundingClientRect();
+
+							el.style.setProperty("top",`${parentRect.top}px`);
+							el.style.setProperty("left",`${parentRect.left+parentRect.width/2}px`);
+							el.style.setProperty("display",'block');
+						}
+						function makeInvisible(el){
+							el.style.setProperty("display",'none');
+						}
+					</script>
+
+					<div x-init="registerContainedPopup($el)">
+						<span>
+							objective position <b style="font-size:1.2em;">&uarr;</b>
+						</span>
+						<div id="objective-position-popup" class="popup">
+							<div id="objective-position" class="scrolly">
+								<style>
+									#objective-position {
+										width:100%;
+
+										display: grid;
+										grid-template:
+											" t   t   m   m   llp " auto
+											" lx  vx  mv  ms  lpe " auto
+											" ly  vy  mp  mp  lpl " auto
+											" lz  vz  mm  mm  lpi " auto
+											/ 1fr 1fr 1fr 1fr auto;
+										gap: 0 1em;
+
+										span {
+											height: min-content;
+											width: max-content;
+										}
+									}
+								</style>
+
+								<span style="grid-area:lx;" >x [mm]</span>
+								<span style="grid-area:vx;"  x-text="state.adapter_state?.stage_position.x_pos_mm.toFixed(3)"></span>
+								<span style="grid-area:ly;" >y [mm]</span>
+								<span style="grid-area:vy;"  x-text="state.adapter_state?.stage_position.y_pos_mm.toFixed(3)"></span>
+								<span style="grid-area:lz;" >z [um]</span>
+								<span style="grid-area:vz;"  x-text="(state.adapter_state?.stage_position.z_pos_mm*1e3).toFixed(1)"></span>
+
+								<label style="grid-area:m;">Move By:</label>
+								<select x-model="moveByAxis" style="grid-area:ms;">
+									<option value="x">x [mm]</option>
+									<option value="y">y [mm]</option>
+									<option value="z" selected>z [um]</option>
+								</select>
+								<input style="grid-area:mv;" type="number" is="number-input"
+									step="0.1" min="0.1" x-bind:max="1000"
+									x-init="registerNumberInput($el)" x-model="moveByDistance">
+								<button style="grid-area:mp;" @click="stageMoveBy('+')">+</button>
+								<button style="grid-area:mm;" @click="stageMoveBy('-')">-</button>
+
+								<label style="grid-area:llp;">Loading Position</label>
+								<button style="grid-area:lpe;"
+									x-effect="disableElement($el,()=>state?.adapter_state.is_in_loading_position??true)"
+									@click="await Actions.enterLoadingPosition()">Enter</button>
+								<button style="grid-area:lpl;"
+									x-effect="disableElement($el,()=>!(state?.adapter_state.is_in_loading_position??false))"
+									@click="await Actions.leaveLoadingPosition()">Leave</button>
+								<input style="grid-area:lpi;" type="checkbox" x-init="enabletooltip($el)"
+									x-bind:tooltip="`stage is in loading position? ${state?.adapter_state.is_in_loading_position}`" disabled
+									x-effect="$el.checked=state?.adapter_state.is_in_loading_position??false">
+							</div>
+						</div>
+					</div>
+				</div>
+
+				<div style="grid-area:acquisition;" id="acquisition-progress-container">
+					<style>
+						#acquisition-progress-container{
+							display:grid;
+							grid-template-columns: auto 1fr auto auto;
+						}
+						#acquisition-progress-bar{
+							margin:0.4em;
+							padding:0.4em;
+
+							border:1px solid var(--text-color);
+							--progress-color:lightblue;
+							--bg-color:var(--strong-bg-color);
+							--progress:20%;
+							background:linear-gradient(to right, var(--bg-color), var(--progress-color) 0%, var(--progress-color) var(--progress), var(--bg-color) var(--progress), var(--bg-color) 100%);
+						}
+						.center-content{
+							display:grid;
+							position:relative;
+							*{
+								display:block;
+								height:min-content;
+								position:relative;
+								top:50%;
+								transform:translateY(-50%);
+							}
+						}
+					</style>
+					<div style="font-size:1.6em;" class="center-content"><span>Acquisition</span></div>
+					<div id="acquisition-progress-bar"
+						x-init="registerContainedPopup($el)"
+						x-bind:style="`--progress:${current_acquisition_progress_percent}%;`"
+						>
+						<span>
+							<span x-text="`${latest_acquisition_status?.acquisition_status??'not running'}`"></span>
+							<span>|</span>
+							<span>Progress</span>
+							<span x-text="`${current_acquisition_progress_percent.toFixed(2)}%`"></span>
+							<span>|</span>
+							<span>Done in</span>
+							<span x-text="`${(()=>{
+								let remaining_s=latest_acquisition_status?.acquisition_progress.estimated_remaining_time_s ?? 0.0;
+								const remaining_h=Math.floor(remaining_s/3600);
+								const remaining_m=Math.floor((remaining_s-remaining_h*3600)/60);
+								remaining_s=remaining_s-remaining_h*3600-remaining_m*60;
+
+								const ret=`${remaining_h.toFixed(0)}h ${remaining_m.toFixed(0)}m ${remaining_s.toFixed(0)}s`;
+								return ret;
+							})()}`"></span>
+						</span>
+
+						<div class="popup">
+							<div style="display:grid;grid-template-columns: auto auto;">
+								<label>current acquisition:</label><span
+									x-text="state.current_acquisition_id??'none'"></span>
+
+								<label>Total number of images:</label><span
+									x-text="num_images"></span>
+								<label>last acquisition id</label><span 
+									x-text="latest_acquisition_status?.acquisition_id??''"></span>
+								<label>progress status</label><span
+									x-text="latest_acquisition_status?.acquisition_status??''"></span>
+								<label>progress message</label><span
+									x-text="latest_acquisition_status?.message??''"></span>
+								<label>comment</label><span
+									x-text="latest_acquisition_status?.acquisition_config.comment??''"></span>
+								<label>num images (acquired / total)</label><span
+									x-text="`${latest_acquisition_status?.acquisition_progress.current_num_images??''} / ${latest_acquisition_status?.acquisition_meta_information.total_num_images??''}`"></span>
+								<label>time [s] (elapsed / remaining)</label><span
+									x-text="`${latest_acquisition_status?.acquisition_progress.time_since_start_s.toFixed(1)??''} / ${latest_acquisition_status?.acquisition_progress.estimated_remaining_time_s.toFixed(1)??''}`"></span>
+								<label>storage [GB] (occupied / max total)</label><span
+									x-text="`${latest_acquisition_status?.acquisition_progress.current_storage_usage_GB.toFixed(2)??''} / ${latest_acquisition_status?.acquisition_meta_information.max_storage_size_images_GB.toFixed(2)??''}`"></span>
+							</div>
+						</div>
+					</div>
+					<button style="font-size:1.7em;"
+						x-init="
+							const getLatestStatus=async ()=>{
+								const current_acquisition_id=state.current_acquisition_id;
+
+								// stop fetching updates if no acquisition is currently running
+								if(current_acquisition_id==null){
+									return;
+								}
+
+								const status=await acquisition_status({acquisition_id:current_acquisition_id});
+								latest_acquisition_status=status;
+
+								// if acquisition is completed, do not schedule new update
+								// (wait for value to change to trigger a new update)
+								if(status.acquisition_status=='completed'){
+									return;
+								}
+
+								const status_element=document.getElementById('acquisition-status');
+								if(status_element){
+									status_element.innerHTML=JSON.stringify(status,null,2).replace('\n ','<br>&nbsp;');
+								}
+
+								$nextTick(getLatestStatus);
+							};
+							if(state.current_acquisition_id!=null)getLatestStatus();
+							$watch('state.current_acquisition_id',async ()=>{
+								await getLatestStatus();
+							});
+						"
+						x-effect="disableElement($el,()=>{
+							return state.current_acquisition_id!=null;
+						})"
+						@click="await acquisition_start({ config_file: microscope_config })"
+						>Start</button>
+					<button style="font-size:1.7em;"
+						x-effect="disableElement($el,()=>{
+							return state.current_acquisition_id==null;
+						})"
+						@click="await acquisition_stop({ acquisition_id: state.current_acquisition_id })"
+						>Cancel</button>
 				</div>
 			</div>
 		</div>
