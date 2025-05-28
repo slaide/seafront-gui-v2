@@ -24,6 +24,12 @@ export class ChannelImageView {
         /** @type {SceneInfo[]} */
         this.sceneInfos = []
 
+        const scroll_speed = 2e-3;
+        // allow zooming in quite far, but not zoom out much (there is nothing to see outside the image)
+        const ZOOM_LIMIT={min:0.05,max:1.2};
+
+        const drag={active:false,x:0,y:0};
+
         // toggle drawing loop based on visibility of the plot container
         const observer = new IntersectionObserver((entries) => {
             entries.forEach(entry => {
@@ -33,8 +39,64 @@ export class ChannelImageView {
 
                     for (let el of document.getElementsByClassName("channel-box-image")) {
                         if (!(el instanceof HTMLElement)) continue;
+                        let scene = this._makeImageScene(el);
 
-                        let scene = this._makeImageScene(el)
+                        const {camera}=scene;
+
+                        //@ts-ignore
+                        el.addEventListener("wheel",/** @type {function(WheelEvent):void} */ (event)=>{
+                            event.preventDefault();
+
+                            // calculate zoom factor
+                            let delta_zoom = event.deltaY * scroll_speed;
+                            // apply
+                            if(delta_zoom>0){
+                                scene.range.zoom*=1+delta_zoom;
+                            }else{
+                                scene.range.zoom/=1-delta_zoom;
+                            }
+                            
+                            scene.range.zoom=Math.min(Math.max(scene.range.zoom,ZOOM_LIMIT.min),ZOOM_LIMIT.max);
+
+                            // link zooms across channel views
+                            for(const otherscene of this.sceneInfos){
+                                otherscene.range.zoom=scene.range.zoom;
+                            }
+
+                        }, { capture: true, passive: false });
+                        el.addEventListener("mousedown",(event)=>{
+                            event.preventDefault();
+                            drag.active=true;
+                            drag.x=event.clientX;
+                            drag.y=event.clientY;
+                        });
+                        el.addEventListener("mouseup",(event)=>{
+                            event.preventDefault();
+                            drag.active=false;
+                        });
+                        el.addEventListener("mousemove",(event)=>{
+                            if(!drag.active)return;
+
+                            event.preventDefault();
+
+                            // calculate offset
+                            const deltax=event.clientX-drag.x;
+                            const deltay=event.clientY-drag.y;
+
+                            // adjust offset
+                            scene.range.offsetx-=deltax*scene.range.zoom;
+                            scene.range.offsety+=deltay*scene.range.zoom;
+
+                            // update current cursor position for later updates
+                            drag.x=event.clientX;
+                            drag.y=event.clientY;
+
+                            // link offsets across channel views
+                            for(const otherscene of this.sceneInfos){
+                                otherscene.range.offsetx=scene.range.offsetx;
+                                otherscene.range.offsety=scene.range.offsety;
+                            }
+                        })
 
                         this.sceneInfos.push(scene)
                     }
@@ -108,11 +170,15 @@ export class ChannelImageView {
         camera.position.z = 1;
 
         /** @type {SceneInfo} */
-        const sceneInfo = { channelhandle, scene, camera, elem, mesh: undefined, img: undefined }
+        const sceneInfo = {
+                            channelhandle, scene, camera, elem,
+                            mesh: undefined, img: undefined,
+                            range: { zoom:1, offsetx:0, offsety:0 }
+                        };
 
         let imageinfo = this.cached_channel_image.get(channelhandle)
         if (imageinfo) {
-            this.updateTextureData(sceneInfo, imageinfo)
+            this.updateTextureData(sceneInfo, imageinfo);
         }
 
         return sceneInfo;
@@ -319,11 +385,11 @@ export class ChannelImageView {
 
         if (sceneInfo.img?.texture) {
             this.cameraFit(camera, {
-                height: sceneInfo.img.height,
-                width: sceneInfo.img.width,
+                height: sceneInfo.img.height*sceneInfo.range.zoom,
+                width: sceneInfo.img.width*sceneInfo.range.zoom,
                 center: {
-                    x: 0,//sceneInfo.img.width/2,
-                    y: 0,//sceneInfo.img.height/2,
+                    x: sceneInfo.range.offsetx,
+                    y: sceneInfo.range.offsety,
                 },
                 aspect_ratio: elem.getBoundingClientRect().width / elem.getBoundingClientRect().height
             })

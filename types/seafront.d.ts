@@ -106,6 +106,7 @@ declare global {
     };
 
     type SceneInfo = {
+        range:{zoom:number;offsetx:number;offsety:number;};
         channelhandle: string;
         scene: THREE.Scene;
         camera: THREE.OrthographicCamera;

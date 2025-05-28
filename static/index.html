@@ -913,7 +913,9 @@
 
 					<div x-init="registerContainedPopup($el)">
 						<span>
-							objective position <b style="font-size:1.2em;">&uarr;</b>
+							<!-- from https://stackoverflow.com/a/18367765 -->
+							<span style="display:inline-block;transform:rotate(45deg);">&#9906;</span>
+							objective position
 						</span>
 						<div id="objective-position-popup" class="popup">
 							<div id="objective-position" class="scrolly">
