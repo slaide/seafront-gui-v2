@@ -256,13 +256,16 @@ declare global {
     type MachineConfigItem = ConfigItem;
     type MachineDefaults=MachineConfigItem[];
 
-    type ConfigListEntry={
+    type ConfigListInfo={
         filename: string;
-        timestamp: string;
+        project_name:string;
+        plate_name:string;
         comment: string;
+        timestamp: string;
         cell_line: string;
         plate_type: Wellplate;
     };
+    type ConfigListEntry=ConfigListInfo;
     type ConfigListResponse={configs:ConfigListEntry[]};
 
     type StoreConfigRequest={

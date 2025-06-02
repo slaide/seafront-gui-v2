@@ -309,6 +309,47 @@ document.addEventListener('alpine:init', () => {
 
         /** protocols stored on server @type {ConfigListEntry[]} */
         protocol_list:[],
+        protol_list_filters:{
+            filename:"",
+            project_name:"",
+            plate_name:"",
+            comment:"",
+            cell_line:"",
+            plate_type:"",
+        },
+        get filtered_protocol_list(){
+            return this.protocol_list.filter(p=>{
+                if(this.protol_list_filters.filename){
+                    return p.filename.toLowerCase().indexOf(this.protol_list_filters.filename.toLowerCase())>-1;
+                }
+                return true;
+            }).filter(p=>{
+                if(this.protol_list_filters.project_name){
+                    return p.project_name.toLowerCase().indexOf(this.protol_list_filters.project_name.toLowerCase())>-1;
+                }
+                return true;
+            }).filter(p=>{
+                if(this.protol_list_filters.plate_name){
+                    return p.plate_name.toLowerCase().indexOf(this.protol_list_filters.plate_name.toLowerCase())>-1;
+                }
+                return true;
+            }).filter(p=>{
+                if(this.protol_list_filters.comment){
+                    return p.comment.toLowerCase().indexOf(this.protol_list_filters.comment.toLowerCase())>-1;
+                }
+                return true;
+            }).filter(p=>{
+                if(this.protol_list_filters.cell_line){
+                    return p.cell_line.toLowerCase().indexOf(this.protol_list_filters.cell_line.toLowerCase())>-1;
+                }
+                return true;
+            }).filter(p=>{
+                if(this.protol_list_filters.plate_type){
+                    return p.plate_type.Model_id.toLowerCase().indexOf(this.protol_list_filters.plate_type.toLowerCase())>-1;
+                }
+                return true;
+            });
+        },
         async refreshConfigList(){
             this.protocol_list=(await this.getConfigList()).configs;
         },
