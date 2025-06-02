@@ -762,6 +762,161 @@ document.addEventListener('alpine:init', () => {
          * @type {AcquisitionWellSiteConfigurationSiteSelectionItem?}
          */
         start_selected_well: null,
+        start_pos:{x:0,y:0},
+        end_pos:{x:0,y:0},
+        /**
+         * to keep track of interactive well selection with the mouse cursor
+         * @type {AcquisitionWellSiteConfigurationSiteSelectionItem?}
+         */
+        current_hovered_well:null,
+
+        _backupTooltipConfigEnabled:false,
+        /**
+         * start selection range at current well.
+         * @param {MouseEvent} event
+         * @param {AcquisitionWellSiteConfigurationSiteSelectionItem} well 
+         */
+        setStartSelectedWell(event,well){
+            this.start_selected_well=well;
+
+            // set center of element as start of selection overlay
+            const el=event.currentTarget;
+            if(!(el instanceof HTMLElement))return;
+            let ebb=el.getBoundingClientRect();
+            this.start_pos.x=ebb.left+ebb.width/2;
+            this.start_pos.y=ebb.top+ebb.height/2;
+
+            // this is only triggered through dom if something was already selected on enter
+            // -> manually trigger on same well on mousedown
+            this.selectionContinue(event,well);
+
+            // disable tooltips while in selection mode
+            this._backupTooltipConfigEnabled=tooltipConfig.enabled;
+            tooltipConfig.enabled=false;
+        },
+        /**
+         * flushed selection range. if well is valid, toggles range.
+         * if well is null, disables selection mode.
+         * @param {AcquisitionWellSiteConfigurationSiteSelectionItem?} well 
+         */
+        async endSelectionRange(well){
+            // flush selection
+            await this.toggleWellSelectionRange(this.start_selected_well,well);
+
+            // remove selection overlay
+            if(this.overlayelement){
+                this.overlayelement.remove();
+                this.overlayelement=null;
+            }
+            // clear descriptive text
+            this.selectionRangeText="";
+
+            // clear selection elements
+            this.start_selected_well=null;
+            this.current_hovered_well=null;
+
+            // restore tooltip status
+            tooltipConfig.enabled=this._backupTooltipConfigEnabled;
+        },
+        /** @type {HTMLElement?} */
+        overlayelement:null,
+        /** descriptive text for the current selection */
+        selectionRangeText:"",
+        /**
+         * 
+         * @param {MouseEvent} event
+         * @param {AcquisitionWellSiteConfigurationSiteSelectionItem} well 
+         */
+        selectionContinue(event,well){
+            if(this.start_selected_well){
+                this.current_hovered_well=well;
+
+                // set center of element as end of selection overlay
+                const el=event.currentTarget;
+                if(!(el instanceof HTMLElement))return;
+                let ebb=el.getBoundingClientRect();
+                this.end_pos.x=ebb.left+ebb.width/2;
+                this.end_pos.y=ebb.top+ebb.height/2;
+
+                if(!this.overlayelement){
+                    this.overlayelement=document.createElement("div");
+                    this.overlayelement.style.setProperty("position","absolute");
+
+                    this.overlayelement.style.setProperty("background-color","red");
+                    this.overlayelement.style.setProperty("opacity","0.5");
+                    this.overlayelement.style.setProperty("z-index","1");
+                    this.overlayelement.style.setProperty("pointer-events","none");
+
+                    document.body.appendChild(this.overlayelement);
+                }
+
+                const top=Math.min(this.start_pos.y,this.end_pos.y);
+                const bottom=Math.max(this.start_pos.y,this.end_pos.y);
+                const right=Math.max(this.end_pos.x,this.start_pos.x);
+                const left=Math.min(this.end_pos.x,this.start_pos.x);
+
+                // update position (and size)
+                this.overlayelement.style.setProperty("top",`${top}px`);
+                this.overlayelement.style.setProperty("left",`${left}px`);
+                this.overlayelement.style.setProperty("width",`${right-left}px`);
+                this.overlayelement.style.setProperty("height",`${bottom-top}px`);
+
+                // update descriptive text
+                this.selectionRangeText=`will ${this.start_selected_well.selected?'de':''}select ${this.wellName(this.start_selected_well)} - ${this.wellName(this.current_hovered_well)}`
+            }
+        },
+
+        /**
+         * set status of all wells in selection to inverse of current status of first selected element
+         * 
+         * if from or to is null, disables selection mode
+         * @param {AcquisitionWellSiteConfigurationSiteSelectionItem?} from
+         * @param {AcquisitionWellSiteConfigurationSiteSelectionItem?} to
+         */
+        async toggleWellSelectionRange(from, to) {
+            if (!from || !to) {
+                this.start_selected_well = null
+                return
+            }
+
+            const target_status = !from.selected
+
+            const lower_row = Math.min(from.row, to.row)
+            const higher_row = Math.max(from.row, to.row)
+            const lower_col = Math.min(from.col, to.col)
+            const higher_col = Math.max(from.col, to.col)
+
+            this.microscope_config.plate_wells.forEach(well => {
+                if (well.row < 0) return
+                if (well.col < 0) return
+
+                if (well.row >= lower_row && well.row <= higher_row) {
+                    if (well.col >= lower_col && well.col <= higher_col) {
+                        well.selected = target_status
+                    }
+                }
+            });
+            await this.updatePlate(undefined, undefined)
+        },
+
+        /**
+         * 
+         * @param {AcquisitionWellSiteConfigurationSiteSelectionItem} well 
+         */
+        wellInRange(well){
+            if(!this.start_selected_well)return false;
+            if(!this.current_hovered_well)return false;
+
+            const row_min=Math.min(this.start_selected_well.row,this.current_hovered_well.row)
+            const row_max=Math.max(this.start_selected_well.row,this.current_hovered_well.row)
+            const col_min=Math.min(this.start_selected_well.col,this.current_hovered_well.col)
+            const col_max=Math.max(this.start_selected_well.col,this.current_hovered_well.col)
+
+            if(well.col<col_min || well.col>col_max)return false;
+            if(well.row<row_min || well.row>row_max)return false;
+
+            return true;
+        },
 
         /** @type {Map<string,CachedChannelImage>} */
         cached_channel_image: new Map(),
@@ -823,37 +978,6 @@ document.addEventListener('alpine:init', () => {
                 block: 'start',
                 inline: 'nearest',
             });
-        },
-
-        /**
-         * set status of all wells in selection to inverse of current status of first selected element
-         * @param {AcquisitionWellSiteConfigurationSiteSelectionItem?} from
-         * @param {AcquisitionWellSiteConfigurationSiteSelectionItem?} to
-         */
-        async toggleWellSelectionRange(from, to) {
-            if (!from || !to) {
-                this.start_selected_well = null
-                return
-            }
-
-            const target_status = !from.selected
-
-            const lower_row = Math.min(from.row, to.row)
-            const higher_row = Math.max(from.row, to.row)
-            const lower_col = Math.min(from.col, to.col)
-            const higher_col = Math.max(from.col, to.col)
-
-            this.microscope_config.plate_wells.forEach(well => {
-                if (well.row < 0) return
-                if (well.col < 0) return
-
-                if (well.row >= lower_row && well.row <= higher_row) {
-                    if (well.col >= lower_col && well.col <= higher_col) {
-                        well.selected = target_status
-                    }
-                }
-            });
-            await this.updatePlate(undefined, undefined)
         },
 
         /**

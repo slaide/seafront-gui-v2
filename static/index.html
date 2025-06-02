@@ -472,6 +472,31 @@
 								</div>
 
 								<style>
+									/* 1 slide holder */
+									#wellcontainer.wellsx1,
+									/* 4 slide holder */
+									#wellcontainer.wellsx4{
+										.well{
+											font-size: 2em;
+										}
+									}
+									/* 96 well plate */
+									#wellcontainer.wellsx12{
+										.well{
+											font-size: 1.5em;
+										}
+									}
+									/* 384 well plate */
+									#wellcontainer.wellsx24{
+										.well{
+											font-size: 1.2em;
+										}
+									}
+									#wellcontainer.wellsx48{
+										.well{
+											font-size: 0.56em;
+										}
+									}
 									#wellcontainer {
 										display: grid;
 										border: 1px solid black;
@@ -481,7 +506,6 @@
 
 										.well {
 											font-family: monospace;
-											font-size: 1.2em;
 										}
 
 										.well:not(.wellheader) {
@@ -497,10 +521,12 @@
 										}
 									}
 								</style>
-								<div id=wellcontainer x-bind:style="`
+								<div id=wellcontainer
+									x-bind:class="`wellsx${microscope_config.wellplate_type.Num_wells_x}`"
+									x-bind:style="`
 									--numcols:${microscope_config.wellplate_type.Num_wells_x};
 									--well-aspect-ratio:${microscope_config.wellplate_type.Well_size_x_mm/microscope_config.wellplate_type.Well_size_y_mm}
-									`" @mouseleave="this.start_selected_well=null">
+									`" @mouseleave="endSelectionRange(null)">
 									<style>
 										.well{
 											display:grid;
@@ -513,20 +539,25 @@
 												transform: translateY(-50%);
 											}
 										}
+										.inselection{
+											background:red;
+										}
 									</style>
 									<template x-for="well in microscope_config.plate_wells" :key="`c${well.col}r${well.row}`">
 										<div x-init="if((well.col>=0) && (well.row>=0)){enabletooltip($el)}"
 											x-bind:tooltip="`Well ${wellName(well)}`"
 											class="well noselect"
 											x-bind:class="`${well.selected?'selected':''} ${(well.col>=0 && well.row>=0)?'clickable':'wellheader'}`"
-											@mousedown="this.start_selected_well=well"
-											@mouseup="await toggleWellSelectionRange(this.start_selected_well,well)"
+											@mousedown="setStartSelectedWell(event,well)"
+											@mouseenter="selectionContinue(event,well)"
+											@mouseup="endSelectionRange(well)"
 											@dblclick="await buttons_wellcontainer_dblclick(well)"
 										>
 											<span x-text="(!((well.col>=0) && (well.row>=0)))?wellText(well):''"></span>
 										</div>
 									</template>
 								</div>
+								<div x-text="selectionRangeText"></div>
 							</div>
 						</div>
 					</div>
