@@ -94,6 +94,7 @@ Object.assign(window, { checkMapSquidRequest });
 
 document.addEventListener("alpine:init", () => {
     Alpine.data("microscope_state", () => ({
+        /** url to microscope (hardware) server */
         server_url: "http://127.0.0.1:5002",
 
         tooltipConfig,
