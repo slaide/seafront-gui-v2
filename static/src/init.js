@@ -910,6 +910,8 @@ document.addEventListener("alpine:init", () => {
          * @param {AcquisitionWellSiteConfigurationSiteSelectionItem?} well
          */
         async endSelectionRange(well) {
+            if (!this.start_selected_well) return;
+
             // flush selection
             await this.toggleWellSelectionRange(this.start_selected_well, well);
 
