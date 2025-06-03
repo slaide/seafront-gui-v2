@@ -816,7 +816,6 @@ document.addEventListener("alpine:init", () => {
         },
         /** @type {ChannelImageView|null} */
         view: null,
-        /** @type {number} */
         channelViewNumCols: 3,
 
         /**
@@ -1660,6 +1659,32 @@ document.addEventListener("alpine:init", () => {
             this.actionInput.live_acquisition_channelhandle = element.value;
         },
 
+        async machineConfigReset() {
+            this.microscope_config.machine_config =
+                await this.getMachineDefaults();
+        },
+        async machineConfigFlush() {
+            /** @type {MachineConfigFlushRequest} */
+            const body = {
+                machine_config: this.microscope_config.machine_config,
+            };
+
+            return fetch(`${this.server_url}/api/action/machine_config_flush`, {
+                method: "POST",
+                body: JSON.stringify(body),
+                headers: [["Content-Type", "application/json"]],
+            })
+                .then((v) => {
+                    /** @ts-ignore @type {CheckMapSquidRequestFn<MachineConfigFlushResponse,InternalErrorModel>} */
+                    const check = checkMapSquidRequest;
+                    return check(v);
+                })
+                .then((v) => {
+                    console.log(v);
+                    return v;
+                });
+        },
+
         /*
         input values that are used by some requests sent to the server, hence
         should be stored here to avoid dom interactions outside alpine
@@ -1672,7 +1697,7 @@ document.addEventListener("alpine:init", () => {
         /** @type {'x'|'y'|'z'} */
         moveByAxis: "z",
         /** move by distance. unit depends on moveByAxis */
-        moveByDistance: 1,
+        moveByDistance: 1.0,
         /**
          *
          * @param {'+'|'-'} d

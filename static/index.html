@@ -150,7 +150,7 @@
                                     min="1"
                                     max="4"
                                     step="1"
-                                    x-model="channelViewNumCols"
+                                    x-model.number="channelViewNumCols"
                                     x-init="registerNumberInput($el)"
                                 />
                                 <button
@@ -243,7 +243,7 @@
                                 >
                                 <input
                                     type="checkbox"
-                                    x-model="configStore_overwrite_on_conflict"
+                                    x-model.boolean="configStore_overwrite_on_conflict"
                                 />
                             </div>
                             <div>
@@ -375,10 +375,11 @@
                                     x-model="machineConfigHandleFilter"
                                     placeholder="filter handles containing this"
                                 />
-                                <button
-                                    @click="microscope_config.machine_config=await getMachineDefaults()"
-                                >
+                                <button @click="machineConfigReset">
                                     reset all values
+                                </button>
+                                <button @click="machineConfigFlush">
+                                    flush local to server
                                 </button>
                             </div>
                             <table>
@@ -400,7 +401,7 @@
                                             <input
                                                 x-bind:id="`machineconfig-${config.handle}-frozen`"
                                                 type="checkbox"
-                                                x-model="config.frozen"
+                                                x-model.boolean="config.frozen"
                                                 x-init="disableElement($el,()=>(config.frozen||config.value_kind=='action'))"
                                             />
                                         </td>
@@ -417,7 +418,7 @@
                                                 <input
                                                     type="number"
                                                     step="1"
-                                                    x-model="config.value"
+                                                    x-model.number="config.value"
                                                     is="number-input"
                                                     x-init="registerNumberInput($el)"
                                                     x-effect="disableElement($el,()=>config.frozen)"
@@ -429,7 +430,7 @@
                                                 <input
                                                     type="number"
                                                     step="0.01"
-                                                    x-model="config.value"
+                                                    x-model.number="config.value"
                                                     is="number-input"
                                                     x-init="registerNumberInput($el)"
                                                     x-effect="disableElement($el,()=>config.frozen)"
@@ -488,7 +489,7 @@
                                 <label>num steps</label
                                 ><input
                                     type="number"
-                                    x-model="laserAutofocusDebug_numz"
+                                    x-model.number="laserAutofocusDebug_numz"
                                     step="2"
                                     min="3"
                                     max="99"
@@ -496,7 +497,7 @@
                                 <label>delta z [um]</label
                                 ><input
                                     type="number"
-                                    x-model="laserAutofocusDebug_totalz_um"
+                                    x-model.number="laserAutofocusDebug_totalz_um"
                                     step="10"
                                     min="20"
                                     max="500"
@@ -613,7 +614,7 @@
                                             max="999"
                                             step="1"
                                             @change="updatePlate"
-                                            x-model="microscope_config.grid.num_x"
+                                            x-model.number="microscope_config.grid.num_x"
                                         />
 
                                         <label style="grid-area: l-d-x"
@@ -627,7 +628,7 @@
                                             max="999"
                                             step="0.1"
                                             @change="updatePlate"
-                                            x-model="microscope_config.grid.delta_x_mm"
+                                            x-model.number="microscope_config.grid.delta_x_mm"
                                         />
 
                                         <label style="grid-area: l-n-y"
@@ -640,7 +641,7 @@
                                             max="999"
                                             step="1"
                                             @change="updatePlate"
-                                            x-model="microscope_config.grid.num_y"
+                                            x-model.number="microscope_config.grid.num_y"
                                         />
 
                                         <label style="grid-area: l-d-y"
@@ -654,7 +655,7 @@
                                             max="999"
                                             step="0.1"
                                             @change="updatePlate"
-                                            x-model="microscope_config.grid.delta_y_mm"
+                                            x-model.number="microscope_config.grid.delta_y_mm"
                                         />
 
                                         <label style="grid-area: l-n-t"
@@ -667,7 +668,7 @@
                                             max="9999"
                                             step="1"
                                             @change="updatePlate"
-                                            x-model="microscope_config.grid.num_t"
+                                            x-model.number="microscope_config.grid.num_t"
                                         />
 
                                         <label style="grid-area: l-d-t"
@@ -679,7 +680,7 @@
                                         <input
                                             x-effect="disableElement($el,()=>microscope_config.grid.num_t==1)"
                                             style="grid-area: v-d-t-h"
-                                            type="number"
+                                            type.number="number"
                                             min="0"
                                             max="999"
                                             step="0.1"
@@ -692,7 +693,7 @@
                                         <input
                                             x-effect="disableElement($el,()=>microscope_config.grid.num_t==1)"
                                             style="grid-area: v-d-t-m"
-                                            type="number"
+                                            type.number="number"
                                             min="0"
                                             max="59.9"
                                             step="0.1"
@@ -705,7 +706,7 @@
                                         <input
                                             x-effect="disableElement($el,()=>microscope_config.grid.num_t==1)"
                                             style="grid-area: v-d-t-s"
-                                            type="number"
+                                            type.number="number"
                                             min="0"
                                             max="59.9"
                                             step="0.1"
@@ -1056,7 +1057,7 @@
                                                 <input
                                                     x-bind:id="`${channel.handle}-enabled`"
                                                     type="checkbox"
-                                                    x-model="channel.enabled"
+                                                    x-model.boolean="channel.enabled"
                                                 />
                                                 <div
                                                     class="channel-config-row-name"
@@ -1081,7 +1082,7 @@
                                                     step="limits.imaging_exposure_time_ms.step"
                                                     max="limits.imaging_exposure_time_ms.max"
                                                     placeholder="5"
-                                                    x-model="channel.exposure_time_ms"
+                                                    x-model.number="channel.exposure_time_ms"
                                                     x-init="registerNumberInput($el)"
                                                     is="number-input"
                                                     x-effect="disableElement($el,()=>!channel.enabled)"
@@ -1093,7 +1094,7 @@
                                                     step="limits.imaging_analog_gain_db.step"
                                                     max="limits.imaging_analog_gain_db.max"
                                                     placeholder="0"
-                                                    x-model="channel.analog_gain"
+                                                    x-model.number="channel.analog_gain"
                                                     x-init="registerNumberInput($el)"
                                                     is="number-input"
                                                     x-effect="disableElement($el,()=>!channel.enabled)"
@@ -1105,7 +1106,7 @@
                                                     step="limits.imaging_focus_offset_um.step"
                                                     max="limits.imaging_focus_offset_um.max"
                                                     placeholder="0"
-                                                    x-model="channel.z_offset_um"
+                                                    x-model.number="channel.z_offset_um"
                                                     x-init="registerNumberInput($el)"
                                                     is="number-input"
                                                     x-effect="disableElement($el,()=>!channel.enabled)"
@@ -1117,7 +1118,7 @@
                                                     step="limits.imaging_illum_perc.step"
                                                     max="limits.imaging_illum_perc.max"
                                                     placeholder="100"
-                                                    x-model="channel.illum_perc"
+                                                    x-model.number="channel.illum_perc"
                                                     is="number-input"
                                                     x-init="registerNumberInput($el),$nextTick(()=>$dispatch('blur'))"
                                                     x-effect="disableElement($el,()=>!channel.enabled)"
@@ -1129,7 +1130,7 @@
                                                     step="limits.imaging_number_z_planes.step"
                                                     max="limits.imaging_number_z_planes.max"
                                                     placeholder="1"
-                                                    x-model="channel.num_z_planes"
+                                                    x-model.number="channel.num_z_planes"
                                                     is="number-input"
                                                     x-init="registerNumberInput($el)"
                                                     x-effect="disableElement($el,()=>!channel.enabled)"
@@ -1141,7 +1142,7 @@
                                                     step="limits.imaging_delta_z_um.step"
                                                     max="limits.imaging_delta_z_um.max"
                                                     placeholder="3"
-                                                    x-model="channel.delta_z_um"
+                                                    x-model.number="channel.delta_z_um"
                                                     is="number-input"
                                                     x-init="registerNumberInput($el)"
                                                     x-effect="disableElement($el,()=>!channel.enabled)"
@@ -1231,7 +1232,7 @@
                                             min="1"
                                             max="10"
                                             step="0.1"
-                                            x-model="actionInput.live_acquisition_framerate"
+                                            x-model.number="actionInput.live_acquisition_framerate"
                                             is="number-input"
                                             x-init="enabletooltip($el),registerNumberInput($el)"
                                             x-bind:tooltip="`
@@ -1292,7 +1293,7 @@
                                         >
                                         <input
                                             type="number"
-                                            x-model="laserAutofocusTargetOffsetUM"
+                                            x-model.number="laserAutofocusTargetOffsetUM"
                                         />
                                         <button
                                             @click="button_laserAutofocusMoveToTargetOffset"
@@ -1376,7 +1377,7 @@
                         <input
                             id="tooltips-enabled-checkbox"
                             type="checkbox"
-                            x-model="tooltipConfig.enabled"
+                            x-model.boolean="tooltipConfig.enabled"
                         />
                     </div>
 
@@ -1406,7 +1407,7 @@
                         <label>protocol saved?</label>
                         <input
                             type="checkbox"
-                            x-model="configIsStored"
+                            x-model.boolean="configIsStored"
                             disabled
                             x-effect="const c=JSON.stringify(microscope_config);configIsStored=false;"
                         />
@@ -1533,7 +1534,7 @@
                                         min="0.1"
                                         x-bind:max="1000"
                                         x-init="registerNumberInput($el)"
-                                        x-model="moveByDistance"
+                                        x-model.number="moveByDistance"
                                     />
                                     <button
                                         style="grid-area: mp"
