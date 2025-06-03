@@ -976,16 +976,28 @@ document.addEventListener("alpine:init", () => {
                 const right = Math.max(this.end_pos.x, this.start_pos.x);
                 const left = Math.min(this.end_pos.x, this.start_pos.x);
 
+                // start and end position on screen is at center of well.
+                // use element size (which is identical for all wells)
+                // to extend the overlay to cover all wells in range completely.
+                const element_width = ebb.width;
+                const element_height = ebb.height;
+
                 // update position (and size)
-                this.overlayelement.style.setProperty("top", `${top}px`);
-                this.overlayelement.style.setProperty("left", `${left}px`);
+                this.overlayelement.style.setProperty(
+                    "top",
+                    `${top - element_height / 2}px`,
+                );
+                this.overlayelement.style.setProperty(
+                    "left",
+                    `${left - element_width / 2}px`,
+                );
                 this.overlayelement.style.setProperty(
                     "width",
-                    `${right - left}px`,
+                    `${right - left + element_height}px`,
                 );
                 this.overlayelement.style.setProperty(
                     "height",
-                    `${bottom - top}px`,
+                    `${bottom - top + element_width}px`,
                 );
 
                 // update descriptive text
@@ -998,11 +1010,31 @@ document.addEventListener("alpine:init", () => {
                 if (start_well_name == null || end_well_name == null)
                     throw `wellname is null in overlay text generation`;
 
-                let start_well = this.start_selected_well;
-                let end_well = this.current_hovered_well;
-                if (start_well_name > end_well_name) {
-                    [start_well, end_well] = [end_well, start_well];
-                }
+                // in the text, the well that is more to the top left should be first,
+                // regardless of manual selection order (hence synthesize corners for
+                // text generation).
+                const start_well = {
+                    row: Math.min(
+                        this.start_selected_well.row,
+                        this.current_hovered_well.row,
+                    ),
+                    col: Math.min(
+                        this.start_selected_well.col,
+                        this.current_hovered_well.col,
+                    ),
+                    selected: true,
+                };
+                const end_well = {
+                    row: Math.max(
+                        this.start_selected_well.row,
+                        this.current_hovered_well.row,
+                    ),
+                    col: Math.max(
+                        this.start_selected_well.col,
+                        this.current_hovered_well.col,
+                    ),
+                    selected: true,
+                };
 
                 this.selectionRangeText = `will ${state_change_text} ${this.wellName(start_well)} - ${this.wellName(end_well)}`;
             }
