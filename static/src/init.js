@@ -989,7 +989,22 @@ document.addEventListener("alpine:init", () => {
                 );
 
                 // update descriptive text
-                this.selectionRangeText = `will ${this.start_selected_well.selected ? "de" : ""}select ${this.wellName(this.start_selected_well)} - ${this.wellName(this.current_hovered_well)}`;
+                const state_change_text = this.start_selected_well.selected
+                    ? "deselect"
+                    : "select";
+
+                const start_well_name = this.wellName(this.start_selected_well);
+                const end_well_name = this.wellName(this.current_hovered_well);
+                if (start_well_name == null || end_well_name == null)
+                    throw `wellname is null in overlay text generation`;
+
+                let start_well = this.start_selected_well;
+                let end_well = this.current_hovered_well;
+                if (start_well_name > end_well_name) {
+                    [start_well, end_well] = [end_well, start_well];
+                }
+
+                this.selectionRangeText = `will ${state_change_text} ${this.wellName(start_well)} - ${this.wellName(end_well)}`;
             }
         },
 
