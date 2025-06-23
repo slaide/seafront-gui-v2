@@ -1,6 +1,8 @@
 # seafront-gui-v2
 new seafront gui with gpu acceleration
 
+## DEPRECATED AS OF [seafront v1.0](https://github.com/slaide/seafront/releases/tag/v1.0.0)
+
 the initial version of the seafront gui has pretty bad runtime performance, which is caused by
 1) using a hand-rolled reactive ui js library that could use some optimization
 2) rendering a large number of elements in a canvas-like configuration which requires frequent style recalculations, which are really slow.
